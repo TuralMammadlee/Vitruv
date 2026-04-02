@@ -129,7 +129,7 @@ class SemanticChangelogManagerTest {
             manager.write(COMMIT_SHA, BRANCH, AUTHOR, DATE, MESSAGE, parentShas, changesByResource(), null, uuidResolver);
 
             var doc = readDocument();
-            assertEquals("1.0", doc.formatVersion);
+            assertEquals("1.1", doc.formatVersion);
             assertEquals(COMMIT_SHA, doc.commit.sha);
             assertEquals(SHORT_SHA, doc.commit.shortSha);
             assertEquals(BRANCH, doc.commit.branch);

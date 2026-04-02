@@ -30,12 +30,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Writes and reads semantic changelog files stored under
  * {@code .vitruvius/changelogs/<branch>/json/<shortSha>.json} (JSON) and
- * {@code .vitruvius/changelogs/<branch>/xmi/<shortSha>.xmi} (XMI delta snapshots).
+ * {@code .vitruvius/changelogs/<branch>/xmi/<shortSha>.xmi} (XMI delta
+ * snapshots).
  *
- * <p>At commit time, call {@link #write} with the drained contents of a {@link SemanticChangeBuffer} to produce both files atomically.
+ * <p>
+ * At commit time, call {@link #write} with the drained contents of a
+ * {@link SemanticChangeBuffer} to produce both files atomically.
  * Both files are staged as part of the same Git commit.
  *
- * <p><b>JSON format</b> - human-readable, operation-based, UUID-keyed (stable across branches):
+ * <p>
+ * <b>JSON format</b> - human-readable, operation-based, UUID-keyed (stable
+ * across branches):
+ * 
  * <pre>
  * {
  *   "formatVersion": "1.0",
@@ -52,14 +58,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * }
  * </pre>
  *
- * <p><b>XMI format</b> - machine-readable, HierarchicalId-keyed, suitable for replay and three-way merge.
- * One XMI file is written per changed resource using {@link DeltaPersistence#saveResourceAsChanges} (state-based snapshot of the current model state
+ * <p>
+ * <b>XMI format</b> - machine-readable, HierarchicalId-keyed, suitable for
+ * replay and three-way merge.
+ * One XMI file is written per changed resource using
+ * {@link DeltaPersistence#saveResourceAsChanges} (state-based snapshot of the
+ * current model state
  * expressed as creation EChanges).
  */
 public class SemanticChangelogManager {
 
     private static final Logger LOGGER = LogManager.getLogger(SemanticChangelogManager.class);
-    private static final String FORMAT_VERSION = "1.0";
+    private static final String FORMAT_VERSION = "1.1";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final Path repositoryRoot;
@@ -75,12 +85,14 @@ public class SemanticChangelogManager {
         this.gson = buildGson();
     }
 
-
     /**
      * Writes the JSON changelog and XMI delta snapshots for the given commit.
      *
-     * <p>JSON is written to {@code .vitruvius/changelogs/<branch>/json/<shortSha>.json}.
-     * XMI snapshots are written to {@code .vitruvius/changelogs/<branch>/xmi/<shortSha>.xmi}
+     * <p>
+     * JSON is written to
+     * {@code .vitruvius/changelogs/<branch>/json/<shortSha>.json}.
+     * XMI snapshots are written to
+     * {@code .vitruvius/changelogs/<branch>/xmi/<shortSha>.xmi}
      * for each resource that had changes.
      *
      * @param commitSha         full 40-character commit SHA.
@@ -88,15 +100,23 @@ public class SemanticChangelogManager {
      * @param author            author name.
      * @param authorDate        date the changes were authored.
      * @param message           commit message.
-     * @param parentShas        parent commit SHAs (one for normal commits, two for merge commits).
-     * @param changesByResource map of resource URI -> ordered atomic EChanges, from {@link SemanticChangeBuffer#drainChanges()}.
-     * @param activeResources   all currently loaded EMF Resources; used to locate the resource objects for XMI snapshot writing.
+     * @param parentShas        parent commit SHAs (one for normal commits, two for
+     *                          merge commits).
+     * @param changesByResource map of resource URI -> ordered atomic EChanges, from
+     *                          {@link SemanticChangeBuffer#drainChanges()}.
+     * @param activeResources   all currently loaded EMF Resources; used to locate
+     *                          the resource objects for XMI snapshot writing.
      *                          May be null or empty to skip XMI.
-     * @param uuidResolver      resolver used to convert EObjects to stable UUIDs for JSON output.
-     * @return list of paths of all written files (JSON + any XMI files) for Git staging.
-     * @throws IOException if the JSON file cannot be written (XMI failures are non-fatal).
+     * @param uuidResolver      resolver used to convert EObjects to stable UUIDs
+     *                          for JSON output.
+     * @return list of paths of all written files (JSON + any XMI files) for Git
+     *         staging.
+     * @throws IOException if the JSON file cannot be written (XMI failures are
+     *                     non-fatal).
      */
-    public List<Path> write(String commitSha, String branch, String author, LocalDateTime authorDate, String message, List<String> parentShas, Map<String, List<EChange<EObject>>> changesByResource, Collection<Resource> activeResources, UuidResolver uuidResolver) throws IOException {
+    public List<Path> write(String commitSha, String branch, String author, LocalDateTime authorDate, String message,
+            List<String> parentShas, Map<String, List<EChange<EObject>>> changesByResource,
+            Collection<Resource> activeResources, UuidResolver uuidResolver) throws IOException {
 
         checkNotNull(commitSha, "commitSha must not be null");
         checkNotNull(branch, "branch must not be null");
@@ -108,14 +128,16 @@ public class SemanticChangelogManager {
 
         // Write JSON changelog
         EChangeToEntryConverter converter = new EChangeToEntryConverter(uuidResolver);
-        ChangelogDocument document = buildDocument(commitSha, branch, author, authorDate, message, parentShas, changesByResource, converter);
+        ChangelogDocument document = buildDocument(commitSha, branch, author, authorDate, message, parentShas,
+                changesByResource, converter);
 
         Path jsonDir = repositoryRoot.resolve(".vitruvius").resolve("changelogs").resolve(branch).resolve("json");
         Files.createDirectories(jsonDir);
         Path jsonFile = jsonDir.resolve(shortSha + ".json");
         Files.writeString(jsonFile, gson.toJson(document));
         writtenFiles.add(jsonFile);
-        LOGGER.info("JSON changelog written: {} ({} file change(s), {} semantic change(s))", jsonFile.getFileName(), document.fileChanges.size(), document.summary.totalSemanticChanges);
+        LOGGER.info("JSON changelog written: {} ({} file change(s), {} semantic change(s))", jsonFile.getFileName(),
+                document.fileChanges.size(), document.summary.totalSemanticChanges);
 
         // Write XMI delta snapshots for each changed resource (non-fatal on failure)
         if (activeResources != null && !activeResources.isEmpty()) {
@@ -135,7 +157,8 @@ public class SemanticChangelogManager {
                     writtenFiles.add(xmiFile);
                     LOGGER.debug("XMI delta snapshot written: {}", xmiFile.getFileName());
                 } catch (Exception e) {
-                    LOGGER.warn("Failed to write XMI snapshot for '{}' (non-critical): {}", resourceName, e.getMessage());
+                    LOGGER.warn("Failed to write XMI snapshot for '{}' (non-critical): {}", resourceName,
+                            e.getMessage());
                 }
             }
         }
@@ -147,14 +170,16 @@ public class SemanticChangelogManager {
      *
      * @param branch   the branch name used as the directory component.
      * @param shortSha the 7-character short SHA used as the file name prefix.
-     * @return the parsed {@link ChangelogDocument}, or {@code null} if the file does not exist.
+     * @return the parsed {@link ChangelogDocument}, or {@code null} if the file
+     *         does not exist.
      * @throws IOException if the file exists but cannot be read or parsed.
      */
     public ChangelogDocument read(String branch, String shortSha) throws IOException {
         checkNotNull(branch, "branch must not be null");
         checkNotNull(shortSha, "shortSha must not be null");
 
-        Path file = repositoryRoot.resolve(".vitruvius").resolve("changelogs").resolve(branch).resolve("json").resolve(shortSha + ".json");
+        Path file = repositoryRoot.resolve(".vitruvius").resolve("changelogs").resolve(branch).resolve("json")
+                .resolve(shortSha + ".json");
         if (!Files.exists(file)) {
             return null;
         }
@@ -162,7 +187,9 @@ public class SemanticChangelogManager {
         return gson.fromJson(json, ChangelogDocument.class);
     }
 
-    private ChangelogDocument buildDocument(String commitSha, String branch, String author, LocalDateTime authorDate, String message, List<String> parentShas, Map<String, List<EChange<EObject>>> changesByResource, EChangeToEntryConverter converter) {
+    private ChangelogDocument buildDocument(String commitSha, String branch, String author, LocalDateTime authorDate,
+            String message, List<String> parentShas, Map<String, List<EChange<EObject>>> changesByResource,
+            EChangeToEntryConverter converter) {
         ChangelogDocument doc = new ChangelogDocument();
         doc.formatVersion = FORMAT_VERSION;
 
@@ -192,7 +219,9 @@ public class SemanticChangelogManager {
             List<SemanticChangeEntry> entries = converter.convert(eChanges);
             totalSemantic += entries.size();
 
-            entries.stream().filter(e -> e.getElementUuid() != null && !e.getElementUuid().equals("unknown")).map(SemanticChangeEntry::getElementUuid).filter(uuid -> !allUuids.contains(uuid)).forEach(allUuids::add);
+            entries.stream().filter(e -> e.getElementUuid() != null && !e.getElementUuid().equals("unknown"))
+                    .map(SemanticChangeEntry::getElementUuid).filter(uuid -> !allUuids.contains(uuid))
+                    .forEach(allUuids::add);
 
             ChangelogDocument.FileChangeInfo fileInfo = new ChangelogDocument.FileChangeInfo();
             fileInfo.operation = detectOperation(resourceUri, eChanges).name();
@@ -211,7 +240,8 @@ public class SemanticChangelogManager {
     }
 
     /**
-     * Finds the Resource whose URI string matches the given resourceUri from the active resources.
+     * Finds the Resource whose URI string matches the given resourceUri from the
+     * active resources.
      */
     private Resource findResource(Collection<Resource> resources, String resourceUri) {
         for (Resource r : resources) {
@@ -223,7 +253,8 @@ public class SemanticChangelogManager {
     }
 
     /**
-     * Derives a short, file-system-safe name from a resource URI for use in XMI file names.
+     * Derives a short, file-system-safe name from a resource URI for use in XMI
+     * file names.
      */
     private String deriveResourceName(String resourceUri) {
         try {
@@ -243,14 +274,19 @@ public class SemanticChangelogManager {
 
     /**
      * Infers the file-level operation from the types of EChanges present.
-     * If only create changes are present the file was likely ADDED; if only deletes, DELETED;
+     * If only create changes are present the file was likely ADDED; if only
+     * deletes, DELETED;
      * otherwise MODIFIED.
      */
     private FileOperation detectOperation(String resourceUri, List<EChange<EObject>> eChanges) {
-        boolean hasCreate = eChanges.stream().anyMatch(c -> c instanceof tools.vitruv.change.atomic.eobject.CreateEObject<?>);
-        boolean hasDelete = eChanges.stream().anyMatch(c -> c instanceof tools.vitruv.change.atomic.eobject.DeleteEObject<?>);
-        if (hasCreate && !hasDelete) return FileOperation.ADDED;
-        if (hasDelete && !hasCreate) return FileOperation.DELETED;
+        boolean hasCreate = eChanges.stream()
+                .anyMatch(c -> c instanceof tools.vitruv.change.atomic.eobject.CreateEObject<?>);
+        boolean hasDelete = eChanges.stream()
+                .anyMatch(c -> c instanceof tools.vitruv.change.atomic.eobject.DeleteEObject<?>);
+        if (hasCreate && !hasDelete)
+            return FileOperation.ADDED;
+        if (hasDelete && !hasCreate)
+            return FileOperation.DELETED;
         return FileOperation.MODIFIED;
     }
 
@@ -274,7 +310,21 @@ public class SemanticChangelogManager {
     }
 
     private Gson buildGson() {
-        return new GsonBuilder().setPrettyPrinting().registerTypeAdapter(LocalDateTime.class, (JsonSerializer<LocalDateTime>) (src, type, ctx) -> new JsonPrimitive(src.format(DATE_FORMATTER))).registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (json, type, ctx) -> LocalDateTime.parse(json.getAsString(), DATE_FORMATTER)).create();
+        return new GsonBuilder().setPrettyPrinting().registerTypeAdapter(LocalDateTime.class,
+                (JsonSerializer<LocalDateTime>) (src, type, ctx) -> new JsonPrimitive(src.format(DATE_FORMATTER)))
+                .registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (json, type,
+                        ctx) -> LocalDateTime.parse(json.getAsString(), DATE_FORMATTER))
+                .registerTypeAdapter(ChangeOrigin.class,
+                        (JsonSerializer<ChangeOrigin>) (src, type, ctx) -> new JsonPrimitive(src.name()))
+                .registerTypeAdapter(ChangeOrigin.class,
+                        (JsonDeserializer<ChangeOrigin>) (json, type, ctx) -> {
+                            try {
+                                return ChangeOrigin.valueOf(json.getAsString());
+                            } catch (IllegalArgumentException e) {
+                                return ChangeOrigin.UNKNOWN;
+                            }
+                        })
+                .create();
     }
 
     /**

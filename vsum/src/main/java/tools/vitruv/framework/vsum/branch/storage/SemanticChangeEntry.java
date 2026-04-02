@@ -118,6 +118,13 @@ public class SemanticChangeEntry {
      */
     private final int position;
 
+    /**
+     * Indicates whether this change was made by a human developer ({@link ChangeOrigin#ORIGINAL})
+     * or triggered automatically by the Vitruvius engine ({@link ChangeOrigin#CONSEQUENTIAL}).
+     * Defaults to {@link ChangeOrigin#UNKNOWN} for backward compatibility with pre-1.1 changelogs.
+     */
+    private final ChangeOrigin origin;
+
     private SemanticChangeEntry(Builder builder) {
         this.index = builder.index;
         this.changeType = Objects.requireNonNull(builder.changeType, "changeType must not be null");
@@ -131,6 +138,7 @@ public class SemanticChangeEntry {
         this.referencedElementUuid = builder.referencedElementUuid;
         this.containerUuid = builder.containerUuid;
         this.position = builder.position;
+        this.origin = builder.origin != null ? builder.origin : ChangeOrigin.UNKNOWN;
     }
 
     public static Builder builder() {
@@ -149,6 +157,7 @@ public class SemanticChangeEntry {
         private String referencedElementUuid;
         private String containerUuid;
         private int position = -1;
+        private ChangeOrigin origin;
 
         private Builder() {
         }
@@ -208,6 +217,11 @@ public class SemanticChangeEntry {
             return this;
         }
 
+        public Builder origin(ChangeOrigin origin) {
+            this.origin = origin;
+            return this;
+        }
+
         public SemanticChangeEntry build() {
             return new SemanticChangeEntry(this);
         }
@@ -218,16 +232,16 @@ public class SemanticChangeEntry {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SemanticChangeEntry that = (SemanticChangeEntry) o;
-        return index == that.index && position == that.position && changeType == that.changeType && Objects.equals(emfType, that.emfType) && Objects.equals(elementUuid, that.elementUuid) && Objects.equals(eClass, that.eClass) && Objects.equals(feature, that.feature) && Objects.equals(from, that.from) && Objects.equals(to, that.to) && Objects.equals(referencedElementUuid, that.referencedElementUuid) && Objects.equals(containerUuid, that.containerUuid);
+        return index == that.index && position == that.position && changeType == that.changeType && origin == that.origin && Objects.equals(emfType, that.emfType) && Objects.equals(elementUuid, that.elementUuid) && Objects.equals(eClass, that.eClass) && Objects.equals(feature, that.feature) && Objects.equals(from, that.from) && Objects.equals(to, that.to) && Objects.equals(referencedElementUuid, that.referencedElementUuid) && Objects.equals(containerUuid, that.containerUuid);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, changeType, emfType, elementUuid, eClass, feature, from, to, referencedElementUuid, containerUuid, position);
+        return Objects.hash(index, changeType, emfType, elementUuid, eClass, feature, from, to, referencedElementUuid, containerUuid, position, origin);
     }
 
     @Override
     public String toString() {
-        return "SemanticChangeEntry{" + "index=" + index + ", changeType=" + changeType + ", elementUuid='" + elementUuid + '\'' + ", containerUuid='" + containerUuid + '\'' + ", feature='" + feature + '\'' + ", from='" + from + '\'' + ", to='" + to + '\'' + '}';
+        return "SemanticChangeEntry{" + "index=" + index + ", changeType=" + changeType + ", origin=" + origin + ", elementUuid='" + elementUuid + '\'' + ", containerUuid='" + containerUuid + '\'' + ", feature='" + feature + '\'' + ", from='" + from + '\'' + ", to='" + to + '\'' + '}';
     }
 }

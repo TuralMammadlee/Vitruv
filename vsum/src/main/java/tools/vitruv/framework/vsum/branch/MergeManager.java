@@ -10,9 +10,12 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.merge.MergeStrategy;
 import tools.vitruv.framework.vsum.branch.data.BranchMetadata;
 import tools.vitruv.framework.vsum.branch.data.BranchState;
+import tools.vitruv.framework.vsum.branch.data.DeletionConflict;
 import tools.vitruv.framework.vsum.branch.data.ModelMergeResult;
 import tools.vitruv.framework.vsum.branch.data.ValidationResult;
 import tools.vitruv.framework.vsum.branch.exception.BranchOperationException;
+import tools.vitruv.framework.vsum.branch.storage.DeletionConflictAnalyzer;
+import tools.vitruv.framework.vsum.branch.storage.SemanticChangelogManager;
 import tools.vitruv.framework.vsum.branch.util.MergeResultFile;
 import tools.vitruv.framework.vsum.branch.util.MergeTriggerFile;
 
@@ -46,6 +49,11 @@ public class MergeManager {
 
     private final Path repoRoot;
     private final MergeTriggerFile mergeTriggerFile;
+    private final SemanticChangelogManager changelogManager;
+    private final DeletionConflictAnalyzer deletionConflictAnalyzer;
+
+    /** Deletion conflicts detected during the most recent merge (empty if none). */
+    private List<DeletionConflict> lastDeletionConflicts = List.of();
 
     /**
      * Creates a new MergeManager for the Git repository at the given path.
@@ -56,6 +64,8 @@ public class MergeManager {
         this.repoRoot = checkNotNull(repoRoot, "repository root must not be null");
         checkArgument(Files.isDirectory(repoRoot.resolve(".git")), "No Git repository found at: %s", repoRoot);
         this.mergeTriggerFile = new MergeTriggerFile(repoRoot);
+        this.changelogManager = new SemanticChangelogManager(repoRoot);
+        this.deletionConflictAnalyzer = new DeletionConflictAnalyzer();
     }
 
     /**
@@ -184,6 +194,27 @@ public class MergeManager {
                 // TODO: MG-8 conflict resolution modes
                 List<String> conflictingFiles = new ArrayList<>(conflicts.keySet());
                 LOGGER.warn("Merge resulted in {} conflict(s): {}", conflictingFiles.size(), conflictingFiles);
+
+                // Analyze changelogs for delete-vs-update conflicts
+                try {
+                    Ref resolvedSourceRef = repo.findRef("refs/heads/" + sourceBranch);
+                    String shortShaSource = resolvedSourceRef.getObjectId().abbreviate(7).name();
+                    String shortShaTarget = repo.resolve("HEAD").abbreviate(7).name();
+                    var sourceChangelog = changelogManager.read(sourceBranch, shortShaSource);
+                    var targetChangelog = changelogManager.read(targetBranch, shortShaTarget);
+                    this.lastDeletionConflicts = deletionConflictAnalyzer.analyze(
+                            sourceBranch, targetBranch,
+                            sourceChangelog, targetChangelog,
+                            /* ancestorAvailable */ true);
+                    if (!lastDeletionConflicts.isEmpty()) {
+                        LOGGER.warn("{} delete-vs-update conflict(s) detected",
+                                lastDeletionConflicts.size());
+                    }
+                } catch (Exception e) {
+                    LOGGER.debug("Deletion conflict analysis skipped: {}", e.getMessage());
+                    this.lastDeletionConflicts = List.of();
+                }
+
                 return ModelMergeResult.conflicting(sourceBranch, targetBranch, conflictingFiles);
             }
             case ABORTED:
@@ -249,5 +280,14 @@ public class MergeManager {
         } catch (GitAPIException e) {
             LOGGER.warn("Failed to delete source branch '{}' after merge (non-critical): {}", sourceBranch, e.getMessage());
         }
+    }
+
+    /**
+     * Returns the deletion conflicts detected during the most recent merge.
+     * Empty if no deletion conflicts were found or if the last merge was
+     * successful.
+     */
+    public List<DeletionConflict> getLastDeletionConflicts() {
+        return lastDeletionConflicts;
     }
 }

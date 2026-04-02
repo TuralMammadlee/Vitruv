@@ -40,14 +40,27 @@ public class EChangeToEntryConverter {
     private static final Logger LOGGER = LogManager.getLogger(EChangeToEntryConverter.class);
 
     private final UuidResolver uuidResolver;
+    private final ChangeOrigin defaultOrigin;
 
     /**
      * Creates a converter that uses the given resolver for UUID lookups.
+     * Changes are tagged with {@link ChangeOrigin#UNKNOWN}.
      *
      * @param uuidResolver the resolver to use, must not be null.
      */
     public EChangeToEntryConverter(UuidResolver uuidResolver) {
+        this(uuidResolver, ChangeOrigin.UNKNOWN);
+    }
+
+    /**
+     * Creates a converter that tags every produced entry with the given origin.
+     *
+     * @param uuidResolver  the resolver to use, must not be null.
+     * @param defaultOrigin the origin to assign to every entry, must not be null.
+     */
+    public EChangeToEntryConverter(UuidResolver uuidResolver, ChangeOrigin defaultOrigin) {
         this.uuidResolver = checkNotNull(uuidResolver, "uuidResolver must not be null");
+        this.defaultOrigin = checkNotNull(defaultOrigin, "defaultOrigin must not be null");
     }
 
     /**
@@ -104,7 +117,7 @@ public class EChangeToEntryConverter {
     // Handle lifecycle changes
     private SemanticChangeEntry handleExistence(EObjectExistenceEChange<?> change, int index, SemanticChangeType type, String emfType) {
         EObject element = (EObject) change.getAffectedElement();
-        return SemanticChangeEntry.builder().index(index).changeType(type).emfType(emfType).elementUuid(resolveUuid(element)).eClass(formatEClass(element)).build();
+        return SemanticChangeEntry.builder().index(index).changeType(type).emfType(emfType).elementUuid(resolveUuid(element)).eClass(formatEClass(element)).origin(defaultOrigin).build();
     }
 
     // Handle single-valued attribute changes
@@ -124,7 +137,7 @@ public class EChangeToEntryConverter {
             type = SemanticChangeType.ATTRIBUTE_CHANGED;
         }
 
-        return SemanticChangeEntry.builder().index(index).changeType(type).emfType("ReplaceSingleValuedEAttribute").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).from(formatValue(oldValue)).to(formatValue(newValue)).containerUuid(resolveContainerUuid(element)).build();
+        return SemanticChangeEntry.builder().index(index).changeType(type).emfType("ReplaceSingleValuedEAttribute").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).from(formatValue(oldValue)).to(formatValue(newValue)).containerUuid(resolveContainerUuid(element)).origin(defaultOrigin).build();
     }
 
     @SuppressWarnings("unchecked")
@@ -132,7 +145,7 @@ public class EChangeToEntryConverter {
         EObject element = (EObject) change.getAffectedElement();
         Object newValue = ((InsertEAttributeValue<Object, Object>) change).getNewValue();
 
-        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ATTRIBUTE_VALUE_INSERTED).emfType("InsertEAttributeValue").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).to(formatValue(newValue)).position(((UpdateSingleListEntryEChange<?, ?>) change).getIndex()).containerUuid(resolveContainerUuid(element)).build();
+        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ATTRIBUTE_VALUE_INSERTED).emfType("InsertEAttributeValue").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).to(formatValue(newValue)).position(((UpdateSingleListEntryEChange<?, ?>) change).getIndex()).containerUuid(resolveContainerUuid(element)).origin(defaultOrigin).build();
     }
 
     @SuppressWarnings("unchecked")
@@ -140,7 +153,7 @@ public class EChangeToEntryConverter {
         EObject element = (EObject) change.getAffectedElement();
         Object oldValue = ((RemoveEAttributeValue<Object, Object>) change).getOldValue();
 
-        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ATTRIBUTE_VALUE_REMOVED).emfType("RemoveEAttributeValue").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).from(formatValue(oldValue)).position(((UpdateSingleListEntryEChange<?, ?>) change).getIndex()).containerUuid(resolveContainerUuid(element)).build();
+        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ATTRIBUTE_VALUE_REMOVED).emfType("RemoveEAttributeValue").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).from(formatValue(oldValue)).position(((UpdateSingleListEntryEChange<?, ?>) change).getIndex()).containerUuid(resolveContainerUuid(element)).origin(defaultOrigin).build();
     }
 
     // Handle single-valued reference changes
@@ -159,7 +172,7 @@ public class EChangeToEntryConverter {
         } else {
             type = SemanticChangeType.REFERENCE_CHANGED;
         }
-        return SemanticChangeEntry.builder().index(index).changeType(type).emfType("ReplaceSingleValuedEReference").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).from(oldRef != null ? resolveUuid(oldRef) : null).to(newRef != null ? resolveUuid(newRef) : null).containerUuid(resolveContainerUuid(element)).build();
+        return SemanticChangeEntry.builder().index(index).changeType(type).emfType("ReplaceSingleValuedEReference").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).from(oldRef != null ? resolveUuid(oldRef) : null).to(newRef != null ? resolveUuid(newRef) : null).containerUuid(resolveContainerUuid(element)).origin(defaultOrigin).build();
     }
 
     // Handle multi-valued reference changes
@@ -169,7 +182,7 @@ public class EChangeToEntryConverter {
         EObject element = (EObject) change.getAffectedElement();
         EObject inserted = (EObject) ((InsertEReference<Object>) change).getNewValue();
 
-        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.REFERENCE_VALUE_INSERTED).emfType("InsertEReference").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).referencedElementUuid(inserted != null ? resolveUuid(inserted) : null).to(inserted != null ? resolveUuid(inserted) : null).position(((UpdateSingleListEntryEChange<?, ?>) change).getIndex()).containerUuid(resolveContainerUuid(element)).build();
+        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.REFERENCE_VALUE_INSERTED).emfType("InsertEReference").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).referencedElementUuid(inserted != null ? resolveUuid(inserted) : null).to(inserted != null ? resolveUuid(inserted) : null).position(((UpdateSingleListEntryEChange<?, ?>) change).getIndex()).containerUuid(resolveContainerUuid(element)).origin(defaultOrigin).build();
     }
 
     @SuppressWarnings("unchecked")
@@ -177,7 +190,7 @@ public class EChangeToEntryConverter {
         EObject element = (EObject) change.getAffectedElement();
         EObject removed = (EObject) ((RemoveEReference<Object>) change).getOldValue();
 
-        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.REFERENCE_VALUE_REMOVED).emfType("RemoveEReference").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).referencedElementUuid(removed != null ? resolveUuid(removed) : null).from(removed != null ? resolveUuid(removed) : null).position(((UpdateSingleListEntryEChange<?, ?>) change).getIndex()).containerUuid(resolveContainerUuid(element)).build();
+        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.REFERENCE_VALUE_REMOVED).emfType("RemoveEReference").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).feature(change.getAffectedFeature() != null ? change.getAffectedFeature().getName() : null).referencedElementUuid(removed != null ? resolveUuid(removed) : null).from(removed != null ? resolveUuid(removed) : null).position(((UpdateSingleListEntryEChange<?, ?>) change).getIndex()).containerUuid(resolveContainerUuid(element)).origin(defaultOrigin).build();
     }
 
     // Handle root EObject changes
@@ -185,13 +198,13 @@ public class EChangeToEntryConverter {
     @SuppressWarnings("unchecked")
     private SemanticChangeEntry handleInsertRoot(InsertRootEObject<?> change, int index) {
         EObject element = (EObject) change.getNewValue();
-        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ROOT_INSERTED).emfType("InsertRootEObject").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).to(change.getUri()).build();
+        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ROOT_INSERTED).emfType("InsertRootEObject").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).to(change.getUri()).origin(defaultOrigin).build();
     }
 
     @SuppressWarnings("unchecked")
     private SemanticChangeEntry handleRemoveRoot(RemoveRootEObject<?> change, int index) {
         EObject element = (EObject) change.getOldValue();
-        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ROOT_REMOVED).emfType("RemoveRootEObject").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).from(change.getUri()).build();
+        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ROOT_REMOVED).emfType("RemoveRootEObject").elementUuid(resolveUuid(element)).eClass(formatEClass(element)).from(change.getUri()).origin(defaultOrigin).build();
     }
 
     // Fallback
@@ -205,7 +218,7 @@ public class EChangeToEntryConverter {
             uuid = resolveUuid(element);
             eClass = formatEClass(element);
         }
-        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ELEMENT_REORDERED).emfType(emfType).elementUuid(uuid).eClass(eClass).build();
+        return SemanticChangeEntry.builder().index(index).changeType(SemanticChangeType.ELEMENT_REORDERED).emfType(emfType).elementUuid(uuid).eClass(eClass).origin(defaultOrigin).build();
     }
 
     /**
