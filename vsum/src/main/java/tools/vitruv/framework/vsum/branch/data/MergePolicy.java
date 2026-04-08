@@ -1,110 +1,128 @@
 package tools.vitruv.framework.vsum.branch.data;
 
+import tools.vitruv.framework.vsum.branch.storage.RoleManager;
+
 import java.util.Objects;
 
 /**
- * Configurable merge policy that governs how deletion conflicts are resolved.
+ * Configurable merge policy that governs how deletion conflicts are resolved
+ * based on the current user's {@link RoleDefinition}.
  *
- * <p>Combines three aspects from the supervisor's requirements:
+ * <p>Combines three aspects:
  * <ol>
  *   <li><b>Default deletion policy</b> — which {@link DeletionPolicy} to use
  *       when no interactive choice is made (e.g. headless mode).</li>
- *   <li><b>User role</b> — determines whether the current user is allowed to
- *       approve high-impact deletions.</li>
- *   <li><b>High-impact threshold</b> — the number of lost updates that
- *       qualifies a deletion as "high impact", blocking junior developers
- *       from approving it.</li>
+ *   <li><b>Role-based permissions</b> — the user's role determines how many
+ *       updates they may sacrifice and what severity they can resolve.</li>
+ *   <li><b>Conflict severity</b> — high-severity conflicts (affecting many
+ *       elements) require a role with sufficient authority.</li>
  * </ol>
  *
  * <p>Example usage:
  * <pre>
- * MergePolicy policy = MergePolicy.forRole(UserRole.JUNIOR);
- * // or with explicit configuration:
- * MergePolicy policy = new MergePolicy(DeletionPolicy.RECOVER_FROM_ANCESTOR, UserRole.SENIOR, 5);
+ * // From a RoleManager (preferred):
+ * MergePolicy policy = MergePolicy.forCurrentUser(roleManager);
+ *
+ * // Or with an explicit role:
+ * RoleDefinition dev = RoleDefinition.developer();
+ * MergePolicy policy = MergePolicy.forRole(dev);
+ *
+ * // Or fully manual:
+ * MergePolicy policy = new MergePolicy(DeletionPolicy.RECOVER_FROM_ANCESTOR, myRole);
  * </pre>
  *
  * @see DeletionConflict
- * @see UserRole
+ * @see RoleDefinition
+ * @see ConflictSeverity
  * @see DeletionPolicy
  */
 public class MergePolicy {
 
-    /**
-     * Default threshold: deletions that destroy 3 or more updates are
-     * considered high-impact and require elevated permissions.
-     */
-    public static final int DEFAULT_HIGH_IMPACT_THRESHOLD = 3;
-
     private final DeletionPolicy defaultDeletionPolicy;
-    private final UserRole userRole;
-    private final int highImpactThreshold;
+    private final RoleDefinition role;
+    private final SeverityThresholds severityThresholds;
 
     /**
      * Creates a merge policy with explicit configuration.
      *
      * @param defaultDeletionPolicy the fallback policy when no interactive
      *                              choice is made or in headless mode.
-     * @param userRole              the current user's role.
-     * @param highImpactThreshold   number of lost updates that qualifies as
-     *                              high impact (must be &gt; 0).
+     * @param role                  the role definition governing permissions.
+     * @param severityThresholds    custom thresholds for severity limits.
      */
-    public MergePolicy(DeletionPolicy defaultDeletionPolicy, UserRole userRole,
-                        int highImpactThreshold) {
-        this.defaultDeletionPolicy = Objects.requireNonNull(defaultDeletionPolicy);
-        this.userRole = Objects.requireNonNull(userRole);
-        if (highImpactThreshold <= 0) {
-            throw new IllegalArgumentException("highImpactThreshold must be > 0, got " + highImpactThreshold);
-        }
-        this.highImpactThreshold = highImpactThreshold;
+    public MergePolicy(DeletionPolicy defaultDeletionPolicy, RoleDefinition role, SeverityThresholds severityThresholds) {
+        this.defaultDeletionPolicy = Objects.requireNonNull(defaultDeletionPolicy,
+                "defaultDeletionPolicy must not be null");
+        this.role = Objects.requireNonNull(role, "role must not be null");
+        this.severityThresholds = severityThresholds != null ? severityThresholds : SeverityThresholds.defaults();
+    }
+
+    /**
+     * Creates a merge policy with default severity thresholds.
+     */
+    public MergePolicy(DeletionPolicy defaultDeletionPolicy, RoleDefinition role) {
+        this(defaultDeletionPolicy, role, SeverityThresholds.defaults());
     }
 
     /**
      * Convenience factory: creates a policy for the given role with the
-     * default deletion policy ({@link DeletionPolicy#RECOVER_FROM_ANCESTOR})
-     * and the default high-impact threshold ({@value #DEFAULT_HIGH_IMPACT_THRESHOLD}).
+     * default deletion policy ({@link DeletionPolicy#RECOVER_FROM_ANCESTOR}).
      */
-    public static MergePolicy forRole(UserRole role) {
-        return new MergePolicy(DeletionPolicy.RECOVER_FROM_ANCESTOR, role,
-                DEFAULT_HIGH_IMPACT_THRESHOLD);
+    public static MergePolicy forRole(RoleDefinition role) {
+        return new MergePolicy(DeletionPolicy.RECOVER_FROM_ANCESTOR, role);
     }
 
     /**
-     * Returns whether the current user is allowed to approve the given
-     * deletion conflict.
+     * Convenience factory: creates a policy for the current Git user
+     * by resolving their role from the {@link RoleManager}.
+     */
+    public static MergePolicy forCurrentUser(RoleManager roleManager) {
+        return forRole(roleManager.getCurrentUserRole());
+    }
+
+    /**
+     * Returns whether the current user's role is allowed to approve the
+     * given deletion conflict.
      *
+     * <p>Approval requires both:
      * <ul>
-     *   <li>{@link UserRole#JUNIOR}: blocked if the conflict is high-impact</li>
-     *   <li>{@link UserRole#SENIOR}: always allowed (with confirmation)</li>
-     *   <li>{@link UserRole#ARCHITECT}: always allowed</li>
+     *   <li>The conflict's lost update count is within the role's limit
+     *       (or the role has unlimited approval)</li>
+     *   <li>The conflict's severity is within the role's maximum allowed
+     *       severity</li>
      * </ul>
      */
     public boolean canApproveDeletion(DeletionConflict conflict) {
-        Objects.requireNonNull(conflict);
-        return switch (userRole) {
-            case JUNIOR -> !conflict.isHighImpact(highImpactThreshold);
-            case SENIOR, ARCHITECT -> true;
-        };
+        Objects.requireNonNull(conflict, "conflict must not be null");
+        boolean updatesOk = role.canApproveUpdatesLost(conflict.getLostUpdateCount());
+        boolean severityOk = role.canResolveSeverity(conflict.getSeverity(severityThresholds));
+        return updatesOk && severityOk;
     }
 
     /**
      * Returns whether the given conflict requires escalation to a more
-     * senior team member.  Only applicable for {@link UserRole#JUNIOR}.
+     * senior role. True when the current role cannot approve the conflict.
      */
     public boolean requiresEscalation(DeletionConflict conflict) {
-        Objects.requireNonNull(conflict);
-        return userRole == UserRole.JUNIOR && conflict.isHighImpact(highImpactThreshold);
+        Objects.requireNonNull(conflict, "conflict must not be null");
+        return !canApproveDeletion(conflict);
     }
 
     public DeletionPolicy getDefaultDeletionPolicy() { return defaultDeletionPolicy; }
-    public UserRole getUserRole() { return userRole; }
-    public int getHighImpactThreshold() { return highImpactThreshold; }
+    public RoleDefinition getRole() { return role; }
+    public SeverityThresholds getSeverityThresholds() { return severityThresholds; }
+
+    /**
+     * Returns the role name for display in the CLI resolver.
+     */
+    public String getRoleName() { return role.getName(); }
 
     @Override
     public String toString() {
         return "MergePolicy{" +
                 "defaultPolicy=" + defaultDeletionPolicy +
-                ", userRole=" + userRole +
-                ", highImpactThreshold=" + highImpactThreshold +
+                ", role=" + role.getName() +
+                ", level=" + role.getPermissionLevel() +
                 '}';
     }
 }

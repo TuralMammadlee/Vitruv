@@ -92,6 +92,33 @@ public class DeletionConflict {
         return getLostUpdateCount() >= threshold;
     }
 
+    /**
+     * Computes the {@link ConflictSeverity} of this conflict based on the
+     * number of updates that would be lost if the deletion is accepted.
+     *
+     * <ul>
+     *   <li>0 lost updates → {@link ConflictSeverity#LOW}</li>
+     *   <li>1–2 lost updates → {@link ConflictSeverity#MEDIUM}</li>
+     *   <li>3–9 lost updates → {@link ConflictSeverity#HIGH}</li>
+     *   <li>10+ lost updates → {@link ConflictSeverity#CRITICAL}</li>
+     * </ul>
+     */
+    /**
+     * Computes the {@link ConflictSeverity} of this conflict based on the
+     * number of updates that would be lost if the deletion is accepted, using default thresholds.
+     */
+    public ConflictSeverity getSeverity() {
+        return ConflictSeverity.fromLostUpdateCount(getLostUpdateCount());
+    }
+
+    /**
+     * Computes the {@link ConflictSeverity} of this conflict based on the
+     * number of updates that would be lost if the deletion is accepted, using the provided thresholds.
+     */
+    public ConflictSeverity getSeverity(SeverityThresholds thresholds) {
+        return ConflictSeverity.fromLostUpdateCount(getLostUpdateCount(), thresholds);
+    }
+
     @Override
     public String toString() {
         return "DeletionConflict{" +
@@ -99,6 +126,7 @@ public class DeletionConflict {
                 ", deletingBranch='" + deletingBranch + '\'' +
                 ", updatingBranch='" + updatingBranch + '\'' +
                 ", lostUpdates=" + affectedUpdates.size() +
+                ", severity=" + getSeverity() +
                 ", ancestorAvailable=" + ancestorAvailable +
                 ", deletionOrigin=" + deletionOrigin +
                 '}';

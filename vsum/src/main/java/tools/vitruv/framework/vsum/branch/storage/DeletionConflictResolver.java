@@ -142,11 +142,11 @@ public class DeletionConflictResolver {
 
             // Check user-role guardrails
             if (!mergePolicy.canApproveDeletion(conflict)) {
-                console.printf("  Your role (%s) does not permit approving this deletion.%n",
-                        mergePolicy.getUserRole().name());
+                console.printf("  Your role (%s) does not permit approving this %s-severity deletion.%n",
+                        mergePolicy.getRoleName(), conflict.getSeverity(mergePolicy.getSeverityThresholds()));
                 console.printf("     Escalation required.  Deletion is BLOCKED.%n%n");
                 resolutions.add(new Resolution(conflict, DeletionPolicy.RESTRICT_DELETIONS,
-                        "Blocked: user role " + mergePolicy.getUserRole() + " cannot approve high-impact deletion"));
+                        "Blocked: role " + mergePolicy.getRoleName() + " cannot approve " + conflict.getSeverity(mergePolicy.getSeverityThresholds()) + " deletion"));
                 index++;
                 continue;
             }

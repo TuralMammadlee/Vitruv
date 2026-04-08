@@ -3,15 +3,15 @@ package tools.vitruv.framework.vsum.branch.storage;
 /**
  * Classifies the origin of a model change to support the Vitruvius conflict
  * resolution rule: <em>original changes are preferred to consequential
- * changes</em>.
+ * changes.
  *
- * <p>An <b>original</b> change is one that a human developer physically typed
- * into an editor.  A <b>consequential</b> change is an automatic update that
+ * An original change is one that a human developer physically typed
+ * into an editor. A consequential change is an automatic update that
  * the Vitruvius consistency engine triggered to maintain cross-view
  * consistency.
  *
- * <p>During merge-conflict resolution, original changes should never be
- * silently overruled by consequential changes.  The {@link #priority} value
+ * During merge-conflict resolution, original changes should never be
+ * silently overruled by consequential changes. The {@link #priority} value
  * encodes this preference: higher priority wins in a conflict.
  *
  * @see SemanticChangeEntry#getOrigin()
@@ -20,19 +20,19 @@ public enum ChangeOrigin {
 
     /**
      * A change that was physically made by a human developer in an editor.
-     * These have the highest conflict-resolution priority.
+     * have the highest conflict-resolution priority.
      */
     ORIGINAL("Human-made change from an editor", 10),
 
     /**
      * An automatic change triggered by the Vitruvius consistency engine to
-     * maintain cross-view consistency.  These have lower priority than
+     * maintain cross-view consistency. These have lower priority than
      * original changes during conflict resolution.
      */
     CONSEQUENTIAL("Automatic change from the Vitruvius consistency engine", 5),
 
     /**
-     * The origin of the change could not be determined.  Used for backward
+     * The origin of the change could not be determined. Used for backward
      * compatibility with changelog entries that were recorded before origin
      * tracking was introduced.
      */
@@ -54,7 +54,7 @@ public enum ChangeOrigin {
     }
 
     /**
-     * Returns the conflict-resolution priority.  Higher values win: an
+     * Returns the conflict-resolution priority. Higher values win: an
      * {@link #ORIGINAL} change should not be overruled by a
      * {@link #CONSEQUENTIAL} change.
      */

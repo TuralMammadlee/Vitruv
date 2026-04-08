@@ -12,3 +12,22 @@ dependency-reduced-pom.xml
 META-INF
 build.properties
 plugin.properties
+
+# Walkthroughs, Notes, and Text Documents
+*.txt
+*.md
+
+# AI Assistant Artifacts
+.gemini/
+artifacts/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Additional IDE files (IntelliJ / Eclipse)
+.idea/
+*.iml
+.project
+.classpath
+.settings/

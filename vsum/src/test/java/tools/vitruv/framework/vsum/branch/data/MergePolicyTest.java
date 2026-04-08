@@ -11,76 +11,105 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for {@link MergePolicy}.
+ * Unit tests for {@link MergePolicy} with the dynamic role system.
  */
 class MergePolicyTest {
 
     @Test
-    @DisplayName("Junior cannot approve high-impact deletions")
-    void juniorCannotApproveHighImpact() {
-        MergePolicy policy = MergePolicy.forRole(UserRole.JUNIOR);
-        DeletionConflict conflict = conflictWithUpdates(5); // 5 lost updates >= threshold of 3
+    @DisplayName("Developer cannot approve HIGH-severity deletions")
+    void developerCannotApproveHighSeverity() {
+        MergePolicy policy = MergePolicy.forRole(RoleDefinition.developer());
+        DeletionConflict conflict = conflictWithUpdates(5); // HIGH severity (3-9)
 
         assertFalse(policy.canApproveDeletion(conflict));
         assertTrue(policy.requiresEscalation(conflict));
     }
 
     @Test
-    @DisplayName("Junior can approve low-impact deletions")
-    void juniorCanApproveLowImpact() {
-        MergePolicy policy = MergePolicy.forRole(UserRole.JUNIOR);
-        DeletionConflict conflict = conflictWithUpdates(2); // 2 lost updates < threshold of 3
+    @DisplayName("Developer can approve MEDIUM-severity deletions within update limit")
+    void developerCanApproveMediumSeverity() {
+        MergePolicy policy = MergePolicy.forRole(RoleDefinition.developer());
+        DeletionConflict conflict = conflictWithUpdates(2); // MEDIUM severity, under limit of 3
 
         assertTrue(policy.canApproveDeletion(conflict));
         assertFalse(policy.requiresEscalation(conflict));
     }
 
     @Test
-    @DisplayName("Senior can approve any deletion")
-    void seniorCanApproveAny() {
-        MergePolicy policy = MergePolicy.forRole(UserRole.SENIOR);
-        DeletionConflict conflict = conflictWithUpdates(10);
+    @DisplayName("Developer blocked even for MEDIUM severity if update count meets limit")
+    void developerBlockedAtUpdateLimit() {
+        MergePolicy policy = MergePolicy.forRole(RoleDefinition.developer());
+        // Developer max is 3, canApproveUpdatesLost checks < 3, so 3 is blocked
+        DeletionConflict conflict = conflictWithUpdates(3); // HIGH severity
+
+        assertFalse(policy.canApproveDeletion(conflict));
+    }
+
+    @Test
+    @DisplayName("Methodologist can approve any deletion")
+    void methodologistCanApproveAny() {
+        MergePolicy policy = MergePolicy.forRole(RoleDefinition.methodologist());
+        DeletionConflict conflict = conflictWithUpdates(100); // CRITICAL severity
 
         assertTrue(policy.canApproveDeletion(conflict));
         assertFalse(policy.requiresEscalation(conflict));
     }
 
     @Test
-    @DisplayName("Architect can approve any deletion")
-    void architectCanApproveAny() {
-        MergePolicy policy = MergePolicy.forRole(UserRole.ARCHITECT);
-        DeletionConflict conflict = conflictWithUpdates(100);
+    @DisplayName("Custom role with HIGH max severity can approve HIGH conflicts")
+    void customRoleWithHighSeverity() {
+        RoleDefinition seniorDev = new RoleDefinition(
+                "SENIOR_DEV", 7, 10, ConflictSeverity.HIGH, "Senior developer", false);
+        MergePolicy policy = MergePolicy.forRole(seniorDev);
 
-        assertTrue(policy.canApproveDeletion(conflict));
-        assertFalse(policy.requiresEscalation(conflict));
+        // 5 updates = HIGH severity, and maxLostUpdates is 10 → should be allowed
+        assertTrue(policy.canApproveDeletion(conflictWithUpdates(5)));
+        // 9 updates = HIGH severity, still within limit
+        assertTrue(policy.canApproveDeletion(conflictWithUpdates(9)));
+        // 10 updates = CRITICAL severity → blocked (max severity is HIGH)
+        assertFalse(policy.canApproveDeletion(conflictWithUpdates(10)));
     }
 
     @Test
-    @DisplayName("Custom threshold is respected")
-    void customThresholdIsRespected() {
-        MergePolicy policy = new MergePolicy(
-                DeletionPolicy.RECOVER_FROM_ANCESTOR, UserRole.JUNIOR, 5);
+    @DisplayName("Custom role blocked when update count exceeds limit even if severity is OK")
+    void customRoleBlockedByUpdateLimit() {
+        RoleDefinition limited = new RoleDefinition(
+                "LIMITED", 5, 5, ConflictSeverity.HIGH, "Limited role", false);
+        MergePolicy policy = MergePolicy.forRole(limited);
 
-        // 4 updates < threshold of 5 -> junior can approve
+        // 4 updates (HIGH severity) + under limit → allowed
         assertTrue(policy.canApproveDeletion(conflictWithUpdates(4)));
-        // 5 updates >= threshold of 5 -> junior cannot approve
+        // 5 updates (HIGH severity) + at limit → blocked by update count
         assertFalse(policy.canApproveDeletion(conflictWithUpdates(5)));
-    }
-
-    @Test
-    @DisplayName("Invalid threshold throws exception")
-    void invalidThresholdThrows() {
-        assertThrows(IllegalArgumentException.class, () ->
-                new MergePolicy(DeletionPolicy.RECOVER_FROM_ANCESTOR, UserRole.JUNIOR, 0));
-        assertThrows(IllegalArgumentException.class, () ->
-                new MergePolicy(DeletionPolicy.RECOVER_FROM_ANCESTOR, UserRole.JUNIOR, -1));
     }
 
     @Test
     @DisplayName("Default policy is RECOVER_FROM_ANCESTOR")
     void defaultPolicyIsRecoverFromAncestor() {
-        MergePolicy policy = MergePolicy.forRole(UserRole.SENIOR);
+        MergePolicy policy = MergePolicy.forRole(RoleDefinition.developer());
         assertEquals(DeletionPolicy.RECOVER_FROM_ANCESTOR, policy.getDefaultDeletionPolicy());
+    }
+
+    @Test
+    @DisplayName("getRoleName returns the role's name")
+    void getRoleName() {
+        MergePolicy policy = MergePolicy.forRole(RoleDefinition.developer());
+        assertEquals("DEVELOPER", policy.getRoleName());
+    }
+
+    @Test
+    @DisplayName("Null conflict throws NullPointerException")
+    void nullConflictThrows() {
+        MergePolicy policy = MergePolicy.forRole(RoleDefinition.developer());
+        assertThrows(NullPointerException.class, () -> policy.canApproveDeletion(null));
+        assertThrows(NullPointerException.class, () -> policy.requiresEscalation(null));
+    }
+
+    @Test
+    @DisplayName("Null role in constructor throws NullPointerException")
+    void nullRoleThrows() {
+        assertThrows(NullPointerException.class, () ->
+                new MergePolicy(DeletionPolicy.RECOVER_FROM_ANCESTOR, null));
     }
 
     /**

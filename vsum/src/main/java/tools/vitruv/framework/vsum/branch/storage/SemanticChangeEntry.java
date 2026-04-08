@@ -227,21 +227,25 @@ public class SemanticChangeEntry {
         }
     }
 
+    public ChangeOrigin getOrigin() {
+        return origin != null ? origin : ChangeOrigin.UNKNOWN;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SemanticChangeEntry that = (SemanticChangeEntry) o;
-        return index == that.index && position == that.position && changeType == that.changeType && origin == that.origin && Objects.equals(emfType, that.emfType) && Objects.equals(elementUuid, that.elementUuid) && Objects.equals(eClass, that.eClass) && Objects.equals(feature, that.feature) && Objects.equals(from, that.from) && Objects.equals(to, that.to) && Objects.equals(referencedElementUuid, that.referencedElementUuid) && Objects.equals(containerUuid, that.containerUuid);
+        return index == that.index && position == that.position && changeType == that.changeType && getOrigin() == that.getOrigin() && Objects.equals(emfType, that.emfType) && Objects.equals(elementUuid, that.elementUuid) && Objects.equals(eClass, that.eClass) && Objects.equals(feature, that.feature) && Objects.equals(from, that.from) && Objects.equals(to, that.to) && Objects.equals(referencedElementUuid, that.referencedElementUuid) && Objects.equals(containerUuid, that.containerUuid);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, changeType, emfType, elementUuid, eClass, feature, from, to, referencedElementUuid, containerUuid, position, origin);
+        return Objects.hash(index, changeType, emfType, elementUuid, eClass, feature, from, to, referencedElementUuid, containerUuid, position, getOrigin());
     }
 
     @Override
     public String toString() {
-        return "SemanticChangeEntry{" + "index=" + index + ", changeType=" + changeType + ", origin=" + origin + ", elementUuid='" + elementUuid + '\'' + ", containerUuid='" + containerUuid + '\'' + ", feature='" + feature + '\'' + ", from='" + from + '\'' + ", to='" + to + '\'' + '}';
+        return "SemanticChangeEntry{" + "index=" + index + ", changeType=" + changeType + ", origin=" + getOrigin() + ", elementUuid='" + elementUuid + '\'' + ", containerUuid='" + containerUuid + '\'' + ", feature='" + feature + '\'' + ", from='" + from + '\'' + ", to='" + to + '\'' + '}';
     }
 }

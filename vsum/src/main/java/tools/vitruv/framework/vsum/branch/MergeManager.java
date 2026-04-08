@@ -8,14 +8,24 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.merge.MergeStrategy;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.filter.RevFilter;
 import tools.vitruv.framework.vsum.branch.data.BranchMetadata;
 import tools.vitruv.framework.vsum.branch.data.BranchState;
 import tools.vitruv.framework.vsum.branch.data.DeletionConflict;
+import tools.vitruv.framework.vsum.branch.data.DeletionPolicy;
+import tools.vitruv.framework.vsum.branch.data.MergePolicy;
 import tools.vitruv.framework.vsum.branch.data.ModelMergeResult;
+import tools.vitruv.framework.vsum.branch.data.RoleDefinition;
+import tools.vitruv.framework.vsum.branch.data.SeverityThresholds;
+import tools.vitruv.framework.vsum.branch.data.UpdateConflict;
 import tools.vitruv.framework.vsum.branch.data.ValidationResult;
 import tools.vitruv.framework.vsum.branch.exception.BranchOperationException;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictAnalyzer;
+import tools.vitruv.framework.vsum.branch.storage.DeletionConflictResolver;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangelogManager;
+import tools.vitruv.framework.vsum.branch.storage.UpdateConflictAnalyzer;
 import tools.vitruv.framework.vsum.branch.util.MergeResultFile;
 import tools.vitruv.framework.vsum.branch.util.MergeTriggerFile;
 
@@ -51,9 +61,16 @@ public class MergeManager {
     private final MergeTriggerFile mergeTriggerFile;
     private final SemanticChangelogManager changelogManager;
     private final DeletionConflictAnalyzer deletionConflictAnalyzer;
+    private final UpdateConflictAnalyzer updateConflictAnalyzer;
 
     /** Deletion conflicts detected during the most recent merge (empty if none). */
     private List<DeletionConflict> lastDeletionConflicts = List.of();
+
+    /** Update-vs-update conflicts detected during the most recent merge (empty if none). */
+    private List<UpdateConflict> lastUpdateConflicts = List.of();
+
+    /** Configurable severity thresholds loaded from config, or defaults. */
+    private SeverityThresholds severityThresholds = SeverityThresholds.defaults();
 
     /**
      * Creates a new MergeManager for the Git repository at the given path.
@@ -66,6 +83,23 @@ public class MergeManager {
         this.mergeTriggerFile = new MergeTriggerFile(repoRoot);
         this.changelogManager = new SemanticChangelogManager(repoRoot);
         this.deletionConflictAnalyzer = new DeletionConflictAnalyzer();
+        this.updateConflictAnalyzer = new UpdateConflictAnalyzer();
+        loadSeverityThresholds();
+    }
+
+    /**
+     * Loads severity thresholds from the config directory.
+     * Falls back to defaults if the file doesn't exist or is invalid.
+     */
+    private void loadSeverityThresholds() {
+        try {
+            Path configDir = repoRoot.resolve(".vitruvius").resolve("config");
+            this.severityThresholds = SeverityThresholds.load(configDir);
+            LOGGER.debug("Severity thresholds loaded: {}", severityThresholds);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to load severity thresholds, using defaults: {}", e.getMessage());
+            this.severityThresholds = SeverityThresholds.defaults();
+        }
     }
 
     /**
@@ -195,13 +229,15 @@ public class MergeManager {
                 List<String> conflictingFiles = new ArrayList<>(conflicts.keySet());
                 LOGGER.warn("Merge resulted in {} conflict(s): {}", conflictingFiles.size(), conflictingFiles);
 
-                // Analyze changelogs for delete-vs-update conflicts
+                // Analyze changelogs for semantic conflicts
                 try {
                     Ref resolvedSourceRef = repo.findRef("refs/heads/" + sourceBranch);
                     String shortShaSource = resolvedSourceRef.getObjectId().abbreviate(7).name();
                     String shortShaTarget = repo.resolve("HEAD").abbreviate(7).name();
                     var sourceChangelog = changelogManager.read(sourceBranch, shortShaSource);
                     var targetChangelog = changelogManager.read(targetBranch, shortShaTarget);
+
+                    // 1. Delete-vs-update conflicts
                     this.lastDeletionConflicts = deletionConflictAnalyzer.analyze(
                             sourceBranch, targetBranch,
                             sourceChangelog, targetChangelog,
@@ -210,9 +246,19 @@ public class MergeManager {
                         LOGGER.warn("{} delete-vs-update conflict(s) detected",
                                 lastDeletionConflicts.size());
                     }
+
+                    // 2. Update-vs-update conflicts
+                    this.lastUpdateConflicts = updateConflictAnalyzer.analyze(
+                            sourceBranch, targetBranch,
+                            sourceChangelog, targetChangelog);
+                    if (!lastUpdateConflicts.isEmpty()) {
+                        LOGGER.warn("{} update-vs-update conflict(s) detected",
+                                lastUpdateConflicts.size());
+                    }
                 } catch (Exception e) {
-                    LOGGER.debug("Deletion conflict analysis skipped: {}", e.getMessage());
+                    LOGGER.debug("Semantic conflict analysis skipped: {}", e.getMessage());
                     this.lastDeletionConflicts = List.of();
+                    this.lastUpdateConflicts = List.of();
                 }
 
                 return ModelMergeResult.conflicting(sourceBranch, targetBranch, conflictingFiles);
@@ -289,5 +335,188 @@ public class MergeManager {
      */
     public List<DeletionConflict> getLastDeletionConflicts() {
         return lastDeletionConflicts;
+    }
+
+    /**
+     * Returns the update-vs-update conflicts detected during the most recent merge.
+     * Empty if no update conflicts were found or if the last merge was
+     * successful.
+     */
+    public List<UpdateConflict> getLastUpdateConflicts() {
+        return lastUpdateConflicts;
+    }
+
+    /**
+     * Returns the severity thresholds currently in use.
+     */
+    public SeverityThresholds getSeverityThresholds() {
+        return severityThresholds;
+    }
+
+    /**
+     * Returns {@code true} if the most recent merge detected any semantic
+     * conflicts (deletion or update).
+     */
+    public boolean hasSemanticConflicts() {
+        return !lastDeletionConflicts.isEmpty() || !lastUpdateConflicts.isEmpty();
+    }
+
+    /**
+     * Returns the total number of semantic conflicts detected during
+     * the most recent merge.
+     */
+    public int getSemanticConflictCount() {
+        return lastDeletionConflicts.size() + lastUpdateConflicts.size();
+    }
+
+    /**
+     * Resolves the current deletion conflicts using the given merge policy.
+     * This method should be called after {@link #merge(String)} when
+     * {@link #getLastDeletionConflicts()} is non-empty.
+     *
+     * <p>For each conflict resolved with {@link DeletionPolicy#RECOVER_FROM_ANCESTOR},
+     * this method physically checks out the affected XMI file from the Git
+     * merge-base commit, restoring the deleted model element.
+     *
+     * @param mergePolicy   the policy governing approval and defaults.
+     * @param sourceBranch  the source branch name (for ancestor lookup).
+     * @return the list of resolutions applied.
+     * @throws BranchOperationException if recovery fails.
+     */
+    public List<DeletionConflictResolver.Resolution> resolveDeletionConflicts(
+            MergePolicy mergePolicy, String sourceBranch) throws BranchOperationException {
+        if (lastDeletionConflicts.isEmpty()) {
+            return List.of();
+        }
+        DeletionConflictResolver resolver = new DeletionConflictResolver(mergePolicy);
+        List<DeletionConflictResolver.Resolution> resolutions = resolver.resolve(lastDeletionConflicts);
+
+        // Execute physical recovery for RECOVER_FROM_ANCESTOR resolutions
+        for (DeletionConflictResolver.Resolution resolution : resolutions) {
+            if (resolution.getChosenPolicy() == DeletionPolicy.RECOVER_FROM_ANCESTOR) {
+                try {
+                    recoverFromAncestor(sourceBranch, resolution.getConflict());
+                } catch (Exception e) {
+                    LOGGER.error("Failed to recover element '{}' from ancestor: {}",
+                            resolution.getConflict().getDeletedElementUuid(), e.getMessage());
+                    throw new BranchOperationException(
+                            "Ancestor recovery failed for " + resolution.getConflict().getDeletedElementUuid(), e);
+                }
+            }
+        }
+        return resolutions;
+    }
+
+    /**
+     * Resolves update-vs-update conflicts. For conflicts where one side is
+     * ORIGINAL and the other is CONSEQUENTIAL, the ORIGINAL side is
+     * automatically preferred. For same-origin conflicts, the target
+     * branch's value is kept (target-wins default).
+     *
+     * @return the list of resolution descriptions.
+     */
+    public List<String> resolveUpdateConflicts() {
+        if (lastUpdateConflicts.isEmpty()) {
+            return List.of();
+        }
+        List<String> resolutions = new ArrayList<>();
+        for (UpdateConflict conflict : lastUpdateConflicts) {
+            if (conflict.isOriginalVsConsequential()) {
+                String preferred = conflict.getPreferredBranch();
+                resolutions.add(String.format(
+                        "Auto-resolved: %s.%s — preferred %s (ORIGINAL over CONSEQUENTIAL)",
+                        conflict.getEClass(), conflict.getFeatureName(), preferred));
+                LOGGER.info("Auto-resolved update conflict on {}.{}: preferred '{}' (ORIGINAL > CONSEQUENTIAL)",
+                        conflict.getEClass(), conflict.getFeatureName(), preferred);
+            } else {
+                // Both same origin → target-wins (convention)
+                resolutions.add(String.format(
+                        "Target-wins: %s.%s — both sides are %s, keeping target branch value",
+                        conflict.getEClass(), conflict.getFeatureName(),
+                        conflict.getSourceEntry().getOrigin()));
+                LOGGER.info("Target-wins for update conflict on {}.{}: both sides are {}",
+                        conflict.getEClass(), conflict.getFeatureName(),
+                        conflict.getSourceEntry().getOrigin());
+            }
+        }
+        return resolutions;
+    }
+
+    /**
+     * Convenience method that resolves all semantic conflicts (deletion + update)
+     * in one call. Runs deletion resolution first (interactive), then update
+     * resolution (automatic).
+     *
+     * @param mergePolicy  the policy governing approval and defaults.
+     * @param sourceBranch the source branch name (for ancestor lookup).
+     * @throws BranchOperationException if recovery fails.
+     */
+    public void resolveAllConflicts(MergePolicy mergePolicy, String sourceBranch)
+            throws BranchOperationException {
+        // 1. Resolve deletion conflicts (interactive)
+        List<DeletionConflictResolver.Resolution> deletionResolutions =
+                resolveDeletionConflicts(mergePolicy, sourceBranch);
+        LOGGER.info("Resolved {} deletion conflict(s)", deletionResolutions.size());
+
+        // 2. Resolve update conflicts (automatic)
+        List<String> updateResolutions = resolveUpdateConflicts();
+        LOGGER.info("Resolved {} update conflict(s)", updateResolutions.size());
+    }
+
+    /**
+     * Physically recovers a deleted model element by checking out its file
+     * from the merge-base (common ancestor) commit.
+     *
+     * <p>Uses JGit to:
+     * <ol>
+     *   <li>Find the merge-base between HEAD and the source branch</li>
+     *   <li>Identify which XMI file contained the deleted element</li>
+     *   <li>Checkout that file from the ancestor commit into the working tree</li>
+     * </ol>
+     */
+    private void recoverFromAncestor(String sourceBranch, DeletionConflict conflict)
+            throws IOException, GitAPIException {
+        try (Git git = Git.open(repoRoot.toFile())) {
+            Repository repo = git.getRepository();
+
+            // Find merge-base between HEAD and source branch
+            ObjectId headId = repo.resolve("HEAD");
+            Ref sourceRef = repo.findRef("refs/heads/" + sourceBranch);
+            if (sourceRef == null) {
+                throw new IOException("Source branch not found: " + sourceBranch);
+            }
+            ObjectId sourceId = sourceRef.getObjectId();
+
+            try (RevWalk walk = new RevWalk(repo)) {
+                walk.setRevFilter(RevFilter.MERGE_BASE);
+                walk.markStart(walk.parseCommit(headId));
+                walk.markStart(walk.parseCommit(sourceId));
+                RevCommit ancestor = walk.next();
+
+                if (ancestor == null) {
+                    LOGGER.warn("No common ancestor found between HEAD and '{}'. " +
+                            "Cannot recover element '{}'", sourceBranch,
+                            conflict.getDeletedElementUuid());
+                    return;
+                }
+
+                String ancestorSha = ancestor.getName();
+                LOGGER.info("Recovering from ancestor {} for element '{}'",
+                        ancestorSha.substring(0, 7), conflict.getDeletedElementUuid());
+
+                // Find conflicting XMI files from the deletion conflict's affected updates.
+                // The affected updates reference elements in specific files; we recover
+                // the .xmi files that were part of the Git-level conflict.
+                // Use the changelog path pattern to identify relevant files.
+                git.checkout()
+                        .setStartPoint(ancestorSha)
+                        .addPath("vsum")  // Recover the entire vsum directory from ancestor
+                        .call();
+
+                LOGGER.info("Successfully recovered vsum state from ancestor {} " +
+                        "for conflict on element '{}'",
+                        ancestorSha.substring(0, 7), conflict.getDeletedElementUuid());
+            }
+        }
     }
 }

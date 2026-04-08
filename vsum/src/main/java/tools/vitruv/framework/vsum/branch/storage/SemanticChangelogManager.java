@@ -139,12 +139,55 @@ public class SemanticChangelogManager {
         LOGGER.info("JSON changelog written: {} ({} file change(s), {} semantic change(s))", jsonFile.getFileName(),
                 document.fileChanges.size(), document.summary.totalSemanticChanges);
 
-        // Write XMI delta snapshots for each changed resource (non-fatal on failure)
+        // Write XMI delta snapshots
+        writtenFiles.addAll(writeXmiSnapshots(shortSha, branch, changesByResource.keySet(), activeResources));
+        return writtenFiles;
+    }
+
+    /**
+     * Writes the JSON changelog and XMI delta snapshots for the given commit,
+     * fully utilizing the origin tags associated with each change.
+     *
+     * @see #write(String, String, String, LocalDateTime, String, List, Map, Collection, UuidResolver)
+     */
+    public List<Path> writeAnnotated(String commitSha, String branch, String author, LocalDateTime authorDate, String message,
+            List<String> parentShas, Map<String, List<SemanticChangeBuffer.AnnotatedEChange>> annotatedChangesByResource,
+            Collection<Resource> activeResources, UuidResolver uuidResolver) throws IOException {
+
+        checkNotNull(commitSha, "commitSha must not be null");
+        checkNotNull(branch, "branch must not be null");
+        checkNotNull(annotatedChangesByResource, "annotatedChangesByResource must not be null");
+        checkNotNull(uuidResolver, "uuidResolver must not be null");
+
+        String shortSha = commitSha.substring(0, Math.min(7, commitSha.length()));
+        List<Path> writtenFiles = new ArrayList<>();
+
+        // Write JSON changelog
+        EChangeToEntryConverter converter = new EChangeToEntryConverter(uuidResolver);
+        ChangelogDocument document = buildDocumentAnnotated(commitSha, branch, author, authorDate, message, parentShas,
+                annotatedChangesByResource, converter);
+
+        Path jsonDir = repositoryRoot.resolve(".vitruvius").resolve("changelogs").resolve(branch).resolve("json");
+        Files.createDirectories(jsonDir);
+        Path jsonFile = jsonDir.resolve(shortSha + ".json");
+        Files.writeString(jsonFile, gson.toJson(document));
+        writtenFiles.add(jsonFile);
+        LOGGER.info("Annotated JSON changelog written: {} ({} file change(s), {} semantic change(s))", jsonFile.getFileName(),
+                document.fileChanges.size(), document.summary.totalSemanticChanges);
+
+        // Write XMI delta snapshots
+        writtenFiles.addAll(writeXmiSnapshots(shortSha, branch, annotatedChangesByResource.keySet(), activeResources));
+        return writtenFiles;
+    }
+
+    private List<Path> writeXmiSnapshots(String shortSha, String branch, Collection<String> resourceUris, Collection<Resource> activeResources) throws IOException {
+        List<Path> writtenFiles = new ArrayList<>();
+
         if (activeResources != null && !activeResources.isEmpty()) {
             Path xmiDir = repositoryRoot.resolve(".vitruvius").resolve("changelogs").resolve(branch).resolve("xmi");
             Files.createDirectories(xmiDir);
 
-            for (String resourceUri : changesByResource.keySet()) {
+            for (String resourceUri : resourceUris) {
                 Resource resource = findResource(activeResources, resourceUri);
                 if (resource == null) {
                     LOGGER.debug("No loaded resource found for URI '{}', skipping XMI snapshot", resourceUri);
@@ -225,6 +268,59 @@ public class SemanticChangelogManager {
 
             ChangelogDocument.FileChangeInfo fileInfo = new ChangelogDocument.FileChangeInfo();
             fileInfo.operation = detectOperation(resourceUri, eChanges).name();
+            fileInfo.path = toRelativePath(resourceUri);
+            fileInfo.semanticChanges = entries;
+            doc.fileChanges.add(fileInfo);
+        }
+
+        // Summary
+        doc.summary = new ChangelogDocument.Summary();
+        doc.summary.totalFileChanges = doc.fileChanges.size();
+        doc.summary.totalSemanticChanges = totalSemantic;
+        doc.summary.affectedElementUuids = allUuids;
+
+        return doc;
+    }
+
+    private ChangelogDocument buildDocumentAnnotated(String commitSha, String branch, String author, LocalDateTime authorDate,
+            String message, List<String> parentShas, Map<String, List<SemanticChangeBuffer.AnnotatedEChange>> changesByResource,
+            EChangeToEntryConverter converter) {
+        ChangelogDocument doc = new ChangelogDocument();
+        doc.formatVersion = FORMAT_VERSION;
+
+        // Commit metadata
+        doc.commit = new ChangelogDocument.CommitInfo();
+        doc.commit.sha = commitSha;
+        doc.commit.shortSha = commitSha.substring(0, Math.min(7, commitSha.length()));
+        doc.commit.branch = branch;
+        doc.commit.message = message;
+        doc.commit.parentShas = parentShas != null ? parentShas : List.of();
+
+        if (author != null) {
+            doc.commit.author = new ChangelogDocument.PersonInfo();
+            doc.commit.author.name = author;
+            doc.commit.author.date = authorDate != null ? authorDate.format(DATE_FORMATTER) : null;
+        }
+
+        // File changes with semantic entries
+        doc.fileChanges = new ArrayList<>();
+        int totalSemantic = 0;
+        List<String> allUuids = new ArrayList<>();
+
+        for (Map.Entry<String, List<SemanticChangeBuffer.AnnotatedEChange>> entry : changesByResource.entrySet()) {
+            String resourceUri = entry.getKey();
+            List<SemanticChangeBuffer.AnnotatedEChange> annotatedChanges = entry.getValue();
+
+            List<SemanticChangeEntry> entries = converter.convertAnnotated(annotatedChanges);
+            totalSemantic += entries.size();
+
+            entries.stream().filter(e -> e.getElementUuid() != null && !e.getElementUuid().equals("unknown"))
+                    .map(SemanticChangeEntry::getElementUuid).filter(uuid -> !allUuids.contains(uuid))
+                    .forEach(allUuids::add);
+
+            ChangelogDocument.FileChangeInfo fileInfo = new ChangelogDocument.FileChangeInfo();
+            List<EChange<EObject>> rawEChanges = annotatedChanges.stream().map(SemanticChangeBuffer.AnnotatedEChange::getChange).toList();
+            fileInfo.operation = detectOperation(resourceUri, rawEChanges).name();
             fileInfo.path = toRelativePath(resourceUri);
             fileInfo.semanticChanges = entries;
             doc.fileChanges.add(fileInfo);

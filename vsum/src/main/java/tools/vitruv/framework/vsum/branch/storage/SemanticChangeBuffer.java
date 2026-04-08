@@ -19,35 +19,59 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
  * Accumulates atomic {@code EChange<EObject>} instances between commits, grouped by the URI
- * of the resource they affect.
+ * of the resource they affect, and tags each with its {@link ChangeOrigin}.
  *
  * <p>Register an instance of this class as a {@link ChangePropagationListener} on the
  * {@link tools.vitruv.framework.vsum.branch.BranchAwareVirtualModel} to automatically collect
- * changes after each {@code propagateChange()} call. At commit time, call {@link #drainChanges()}
- * to retrieve and clear the buffer so the changes can be serialized into the semantic changelog.
+ * changes after each {@code propagateChange()} call. At commit time, call
+ * {@link #drainAnnotatedChanges()} to retrieve and clear the buffer so the changes can be
+ * serialized into the semantic changelog with proper origin tags.
  *
- * <p>Only {@link PropagatedChange#getOriginalChange()} is collected.  Consequential changes
- * (reactions / consistency preservation) are intentionally omitted: they can be re-derived
- * by replaying the original atomic changes through Vitruvius, so storing them would be redundant
+ * <p><b>Origin instrumentation:</b> The buffer uses identity comparison to distinguish
+ * original (human-made) from consequential (engine-generated) changes. An {@code EChange}
+ * that appears in any {@link PropagatedChange#getConsequentialChanges()} is tagged as
+ * {@link ChangeOrigin#CONSEQUENTIAL}; all others are tagged as {@link ChangeOrigin#ORIGINAL}.
  *
  * <p>Thread-safety: all public methods and the listener callbacks are {@code synchronized} on
  * {@code this}.  {@link #finishedChangePropagation} is called from the VSUM/model thread while
- * {@link #drainChanges}, {@link #hasChanges}, and {@link #size} may be called from a background
- * watcher thread (e.g. {@code VsumPostCommitWatcher}).
+ * {@link #drainAnnotatedChanges}, {@link #drainChanges}, {@link #hasChanges}, and {@link #size}
+ * may be called from a background watcher thread (e.g. {@code VsumPostCommitWatcher}).
  */
 public class SemanticChangeBuffer implements ChangePropagationListener {
 
     private static final Logger LOGGER = LogManager.getLogger(SemanticChangeBuffer.class);
 
     /**
+     * An EChange paired with its detected origin.
+     */
+    public static class AnnotatedEChange {
+        private final EChange<EObject> change;
+        private final ChangeOrigin origin;
+
+        public AnnotatedEChange(EChange<EObject> change, ChangeOrigin origin) {
+            this.change = Objects.requireNonNull(change);
+            this.origin = Objects.requireNonNull(origin);
+        }
+
+        public EChange<EObject> getChange() { return change; }
+        public ChangeOrigin getOrigin() { return origin; }
+
+        @Override
+        public String toString() {
+            return "AnnotatedEChange{" + change.getClass().getSimpleName() + ", " + origin + '}';
+        }
+    }
+
+    /**
      * Accumulated changes, keyed by the string form of the resource URI.
      * LinkedHashMap preserves insertion order so replay is deterministic.
      */
-    private final Map<String, List<EChange<EObject>>> changesByResource = new LinkedHashMap<>();
+    private final Map<String, List<AnnotatedEChange>> annotatedChangesByResource = new LinkedHashMap<>();
 
     /**
      * Total number of atomic changes accumulated since the last drain.
@@ -59,7 +83,8 @@ public class SemanticChangeBuffer implements ChangePropagationListener {
     }
 
     /**
-     * Collects the original atomic changes from every {@link PropagatedChange} that user initiated.
+     * Collects both original and consequential changes from every
+     * {@link PropagatedChange}, tagging each with its detected {@link ChangeOrigin}.
      *
      * <p>Reaction changes are identified by checking whether their {@code EChange} instances
      * appear in the {@code consequentialChanges} of any other {@link PropagatedChange}.
@@ -73,7 +98,6 @@ public class SemanticChangeBuffer implements ChangePropagationListener {
         propagatedChanges.forEach(pcList::add);
 
         // Collect all EChange instances that are inside consequentialChanges of any PC.
-        // These represent reaction/consistency-preservation outputs and must be excluded.
         Set<Object> reactionEChanges = Collections.newSetFromMap(new IdentityHashMap<>());
         for (PropagatedChange pc : pcList) {
             VitruviusChange<EObject> consequential = pc.getConsequentialChanges();
@@ -82,32 +106,84 @@ public class SemanticChangeBuffer implements ChangePropagationListener {
             }
         }
 
-        // Only collect from PropagatedChanges whose EChanges are NOT reaction outputs.
+        // Collect all changes, tagging each with its origin
         for (PropagatedChange pc : pcList) {
+            // Original changes
             VitruviusChange<EObject> original = pc.getOriginalChange();
-            List<EChange<EObject>> eChanges = original.getEChanges();
-            if (!eChanges.isEmpty() && reactionEChanges.containsAll(eChanges)) {
-                LOGGER.debug("Skipping reaction PropagatedChange ({} EChange(s)) - not user-initiated", eChanges.size());
-                continue;
+            if (original != null) {
+                List<EChange<EObject>> eChanges = original.getEChanges();
+                // Determine if this entire PC is a reaction output
+                boolean isReaction = !eChanges.isEmpty() && reactionEChanges.containsAll(eChanges);
+                ChangeOrigin origin = isReaction ? ChangeOrigin.CONSEQUENTIAL : ChangeOrigin.ORIGINAL;
+
+                for (EChange<EObject> change : eChanges) {
+                    String resourceUri = resolveResourceUri(change);
+                    annotatedChangesByResource.computeIfAbsent(resourceUri, k -> new ArrayList<>())
+                            .add(new AnnotatedEChange(change, origin));
+                    totalChanges++;
+                }
+
+                if (isReaction) {
+                    LOGGER.debug("Collected {} CONSEQUENTIAL change(s) from reaction PC", eChanges.size());
+                }
             }
-            collectFromVitruviusChange(original);
+
+            // Consequential changes (engine-generated) — collect separately if not already collected
+            VitruviusChange<EObject> consequential = pc.getConsequentialChanges();
+            if (consequential != null) {
+                for (EChange<EObject> change : consequential.getEChanges()) {
+                    // Only add if this specific EChange was not already added via originalChange above
+                    String resourceUri = resolveResourceUri(change);
+                    List<AnnotatedEChange> existing = annotatedChangesByResource.get(resourceUri);
+                    boolean alreadyCollected = existing != null && existing.stream()
+                            .anyMatch(a -> a.getChange() == change);
+                    if (!alreadyCollected) {
+                        annotatedChangesByResource.computeIfAbsent(resourceUri, k -> new ArrayList<>())
+                                .add(new AnnotatedEChange(change, ChangeOrigin.CONSEQUENTIAL));
+                        totalChanges++;
+                    }
+                }
+            }
         }
-        LOGGER.debug("Buffer now holds {} atomic change(s) across {} resource(s)", totalChanges, changesByResource.size());
+        LOGGER.debug("Buffer now holds {} atomic change(s) across {} resource(s)",
+                totalChanges, annotatedChangesByResource.size());
     }
 
     /**
-     * Returns an unmodifiable snapshot of the current buffer contents and clears the buffer.
-     * The returned map is keyed by resource URI string and preserves insertion order.
-     * Each value list is an ordered list of atomic EChanges for that resource.
+     * Returns an unmodifiable snapshot of the annotated changes and clears the buffer.
+     * Each entry pairs an EChange with its detected {@link ChangeOrigin}.
      *
      * <p>Call this method once per commit, immediately before writing the changelog.
+     *
+     * @return immutable map of resource URI to ordered annotated changes.
+     */
+    public synchronized Map<String, List<AnnotatedEChange>> drainAnnotatedChanges() {
+        Map<String, List<AnnotatedEChange>> snapshot = new LinkedHashMap<>();
+        annotatedChangesByResource.forEach((uri, changes) ->
+                snapshot.put(uri, Collections.unmodifiableList(new ArrayList<>(changes))));
+        annotatedChangesByResource.clear();
+        int drained = totalChanges;
+        totalChanges = 0;
+        LOGGER.info("Drained {} annotated change(s) from buffer for {} resource(s)", drained, snapshot.size());
+        return Collections.unmodifiableMap(snapshot);
+    }
+
+    /**
+     * Returns an unmodifiable snapshot of the current buffer contents (without origin
+     * annotation) and clears the buffer. This is the backward-compatible method.
      *
      * @return immutable map of resource URI to ordered atomic changes.
      */
     public synchronized Map<String, List<EChange<EObject>>> drainChanges() {
         Map<String, List<EChange<EObject>>> snapshot = new LinkedHashMap<>();
-        changesByResource.forEach((uri, changes) -> snapshot.put(uri, Collections.unmodifiableList(new ArrayList<>(changes))));
-        changesByResource.clear();
+        annotatedChangesByResource.forEach((uri, annotated) -> {
+            List<EChange<EObject>> plain = new ArrayList<>();
+            for (AnnotatedEChange a : annotated) {
+                plain.add(a.getChange());
+            }
+            snapshot.put(uri, Collections.unmodifiableList(plain));
+        });
+        annotatedChangesByResource.clear();
         int drained = totalChanges;
         totalChanges = 0;
         LOGGER.info("Drained {} atomic change(s) from buffer for {} resource(s)", drained, snapshot.size());
@@ -128,31 +204,8 @@ public class SemanticChangeBuffer implements ChangePropagationListener {
         return totalChanges;
     }
 
-    @SuppressWarnings("unchecked")
-    private void collectFromVitruviusChange(VitruviusChange<EObject> vitruviusChange) {
-        if (vitruviusChange == null) {
-            return;
-        }
-        List<EChange<EObject>> eChanges = vitruviusChange.getEChanges();
-        for (EChange<EObject> change : eChanges) {
-            String resourceUri = resolveResourceUri(change);
-            changesByResource.computeIfAbsent(resourceUri, k -> new ArrayList<>()).add(change);
-            totalChanges++;
-        }
-    }
-
     /**
      * Determines the resource URI string for a given EChange.
-     *
-     * <ul>
-     *   <li>For {@link RootEChange} (InsertRootEObject / RemoveRootEObject): uses
-     *       {@link RootEChange#getUri()} directly, as root changes carry the target resource
-     *       URI and do not have a traditional "affected element".</li>
-     *   <li>For {@link FeatureEChange}: uses the resource of the affected element.</li>
-     *   <li>For {@link EObjectExistenceEChange} (Create/Delete): uses the affected element's resource.
-     *       For delete changes the element may have been detached; falls back to {@code "unknown-resource"} in that case.</li>
-     *   <li>For anything else: falls back to {@code "unknown-resource"}.</li>
-     * </ul>
      */
     private String resolveResourceUri(EChange<EObject> change) {
         if (change instanceof RootEChange<?> r) {
@@ -172,7 +225,9 @@ public class SemanticChangeBuffer implements ChangePropagationListener {
             return uri != null ? uri.toString() : "unknown-resource";
         }
 
-        LOGGER.debug("Cannot determine resource URI for change of type '{}', filing under 'unknown-resource'", change.getClass().getSimpleName());
+        LOGGER.debug("Cannot determine resource URI for change of type '{}', filing under 'unknown-resource'",
+                change.getClass().getSimpleName());
         return "unknown-resource";
     }
 }
+
