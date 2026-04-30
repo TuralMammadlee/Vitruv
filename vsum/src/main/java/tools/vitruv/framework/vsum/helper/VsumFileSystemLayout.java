@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.eclipse.jgit.lib.Repository;
 
 import java.io.IOException;
@@ -30,10 +31,12 @@ public class VsumFileSystemLayout {
      * Linh:new
      */
     private static final String VSUM_BASE_DIR = ".vitruvius/vsum";
+    private static final String LEGACY_BRANCH_NAME = "legacy";
     private final String currentBranch;
     private static final Logger LOGGER = LogManager.getLogger(VsumFileSystemLayout.class);
 
     private final Path vsumProjectFolder;
+    private final boolean branchAwareLayout;
     private boolean prepared = false;
 
     /**
@@ -44,8 +47,9 @@ public class VsumFileSystemLayout {
     public VsumFileSystemLayout(Path vsumProjectFolder) {
 
         this.vsumProjectFolder = vsumProjectFolder;
-        //Linh:new
-        this.currentBranch = resolveBranchName();
+        String resolvedBranch = resolveBranchName();
+        this.branchAwareLayout = resolvedBranch != null;
+        this.currentBranch = resolvedBranch != null ? resolvedBranch : LEGACY_BRANCH_NAME;
     }
 
     /**
@@ -55,6 +59,7 @@ public class VsumFileSystemLayout {
     VsumFileSystemLayout(Path vsumProjectFolder, String branchName) {
         this.vsumProjectFolder = vsumProjectFolder;
         this.currentBranch = branchName;
+        this.branchAwareLayout = true;
     }
 
     /**
@@ -78,10 +83,13 @@ public class VsumFileSystemLayout {
             }
             LOGGER.warn("HEAD is detached, using 'detached' as branch name");
             return "detached";
+        } catch (RepositoryNotFoundException e) {
+            LOGGER.debug("No Git repository found at '{}'. Falling back to legacy VSUM layout.", vsumProjectFolder);
+            return null;
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("No Git repository found at: '" + vsumProjectFolder + "'. " + "Please run: git init && git add . && git commit -m 'initial'", e);
+            throw new IllegalStateException("Failed to resolve Git branch at: '" + vsumProjectFolder + "'", e);
         }
     }
 
@@ -180,14 +188,13 @@ public class VsumFileSystemLayout {
     }
 
     private Path getVsumFolder() {
-        //return vsumProjectFolder.resolve(VSUM_FOLDER_NAME);
-        //Linh:new
-        return vsumProjectFolder.resolve(VSUM_BASE_DIR).resolve(currentBranch);
+        if (branchAwareLayout) {
+            return vsumProjectFolder.resolve(VSUM_BASE_DIR).resolve(currentBranch);
+        }
+        return vsumProjectFolder.resolve(VSUM_FOLDER_NAME);
     }
 
     private Path getConsistencyMetadataFolder() {
-        //return vsumProjectFolder.resolve(CONSISTENCY_METADATA_FOLDER_NAME);
-        //Linh:new
         return getVsumFolder().resolve(CONSISTENCY_METADATA_FOLDER_NAME);
     }
 
@@ -211,6 +218,10 @@ public class VsumFileSystemLayout {
     }
 
     public void inheritFromBranchIfEmpty(String sourceBranchName) {
+        if (!branchAwareLayout) {
+            LOGGER.debug("Legacy VSUM layout active, skipping branch inheritance");
+            return;
+        }
         checkState(prepared, "Layout must be prepared before inheriting state");
 
         Path myUuidsFile = Path.of(getUuidsURI().toFileString());
@@ -250,9 +261,10 @@ public class VsumFileSystemLayout {
 
     @Override
     public String toString() {
-        //return "@" + vsumProjectFolder;
-        //Linh:new
-        return "@" + vsumProjectFolder + "[branch=" + currentBranch + "]";
+        if (branchAwareLayout) {
+            return "@" + vsumProjectFolder + "[branch=" + currentBranch + "]";
+        }
+        return "@" + vsumProjectFolder + "[legacy-layout]";
     }
 
     private void checkPrepared() {

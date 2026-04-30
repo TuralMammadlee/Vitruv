@@ -17,7 +17,7 @@ import tools.vitruv.framework.vsum.branch.data.DeletionConflict;
 import tools.vitruv.framework.vsum.branch.data.DeletionPolicy;
 import tools.vitruv.framework.vsum.branch.data.MergePolicy;
 import tools.vitruv.framework.vsum.branch.data.ModelMergeResult;
-import tools.vitruv.framework.vsum.branch.data.RoleDefinition;
+//import tools.vitruv.framework.vsum.branch.data.RoleDefinition;
 import tools.vitruv.framework.vsum.branch.data.SeverityThresholds;
 import tools.vitruv.framework.vsum.branch.data.UpdateConflict;
 import tools.vitruv.framework.vsum.branch.data.ValidationResult;
@@ -44,11 +44,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *
  * <p>Responsibilities:
  * <ul>
- *   <li>Perform three-way merge of a source branch into the current branch (MG-5)</li>
+ *   <li>Perform three-way merge of a source branch into the current branch </li>
  *   <li>Detect fast-forward vs non-fast-forward merges</li>
  *   <li>Return a {@link ModelMergeResult} describing the outcome including conflicts</li>
- *   <li>Mark the source branch as MERGED on success (BR-5, BR-9)</li>
- *   <li>Optionally delete the source branch after successful merge (BR-5)</li>
+ *   <li>Mark the source branch as MERGED on success </li>
+ *   <li>Optionally delete the source branch after successful merge </li>
  *   <li>Write the merge trigger file so VsumMergeWatcher validates the merged state</li>
  * </ul>
  */
@@ -103,7 +103,7 @@ public class MergeManager {
     }
 
     /**
-     * Merges the given source branch into the current branch using a three-way merge (MG-5).
+     * Merges the given source branch into the current branch using a three-way merge.
      *
      * <p>On success: marks source branch as MERGED, writes merge trigger for validation.
      * <p>On fast-forward: same as success but no merge commit is created.
@@ -119,7 +119,7 @@ public class MergeManager {
 
     /**
      * Merges the given source branch into the current branch, with an option to
-     * automatically delete the source branch after a successful merge (BR-5).
+     * automatically delete the source branch after a successful merge.
      *
      * @param sourceBranch     the name of the branch to merge into the current branch.
      * @param deleteAfterMerge whether to delete the source branch after success.
@@ -134,12 +134,12 @@ public class MergeManager {
             // Resolve current (target) branch
             String targetBranch = repo.getBranch();
             LOGGER.info("Merging '{}' into '{}'", sourceBranch, targetBranch);
-            // Verify source branch exists
+            // Verify source branch exists, base 1
             Ref sourceRef = repo.findRef("refs/heads/" + sourceBranch);
             if (sourceRef == null) {
                 throw new BranchOperationException("Source branch does not exist: " + sourceBranch);
             }
-            // Cannot merge a branch into itself
+            // Cannot merge a branch into itself, base 2
             if (sourceBranch.equals(targetBranch)) {
                 throw new BranchOperationException("Cannot merge a branch into itself: " + sourceBranch);
             }
@@ -223,9 +223,9 @@ public class MergeManager {
                 // only need the file paths, not the ranges
                 Map<String, int[][]> conflicts = jgitResult.getConflicts() != null ? jgitResult.getConflicts() : Map.of();
 
-                // TODO: MG-2 conflict classification
-                // TODO: MG-3 conflict priority assignment
-                // TODO: MG-8 conflict resolution modes
+                // TODO: conflict classification
+                // TODO: conflict priority assignment
+                // TODO: conflict resolution modes
                 List<String> conflictingFiles = new ArrayList<>(conflicts.keySet());
                 LOGGER.warn("Merge resulted in {} conflict(s): {}", conflictingFiles.size(), conflictingFiles);
 
@@ -281,7 +281,7 @@ public class MergeManager {
     }
 
     /**
-     * Marks the source branch metadata state as MERGED (BR-9).
+     * Marks the source branch metadata state as MERGED.
      * Non-fatal if the metadata file does not exist.
      */
     private void markAsMerged(String sourceBranch) {
@@ -316,13 +316,13 @@ public class MergeManager {
     }
 
     /**
-     * Deletes the source branch from Git after a successful merge (BR-5).
+     * Deletes the source branch from Git after a successful merge.
      * Non-fatal if deletion fails - the merge has already completed.
      */
     private void deleteSourceBranch(Git git, String sourceBranch) {
         try {
             git.branchDelete().setBranchNames(sourceBranch).setForce(false).call(); // only delete if fully merged
-            LOGGER.info("Source branch '{}' deleted after merge (BR-5)", sourceBranch);
+                LOGGER.info("Source branch '{}' deleted after merge", sourceBranch);
         } catch (GitAPIException e) {
             LOGGER.warn("Failed to delete source branch '{}' after merge (non-critical): {}", sourceBranch, e.getMessage());
         }
@@ -376,9 +376,9 @@ public class MergeManager {
      *
      * <p>For each conflict resolved with {@link DeletionPolicy#RECOVER_FROM_ANCESTOR},
      * this method physically checks out the affected XMI file from the Git
-     * merge-base commit, restoring the deleted model element.
+     * merge-base commit, restoring the deleted model element.  
      *
-     * @param mergePolicy   the policy governing approval and defaults.
+     * @param mergePolicy   the policy for approval and defaults.
      * @param sourceBranch  the source branch name (for ancestor lookup).
      * @return the list of resolutions applied.
      * @throws BranchOperationException if recovery fails.
@@ -447,7 +447,7 @@ public class MergeManager {
      * in one call. Runs deletion resolution first (interactive), then update
      * resolution (automatic).
      *
-     * @param mergePolicy  the policy governing approval and defaults.
+     * @param mergePolicy  the policy for approval and defaults.
      * @param sourceBranch the source branch name (for ancestor lookup).
      * @throws BranchOperationException if recovery fails.
      */
@@ -510,7 +510,7 @@ public class MergeManager {
                 // Use the changelog path pattern to identify relevant files.
                 git.checkout()
                         .setStartPoint(ancestorSha)
-                        .addPath("vsum")  // Recover the entire vsum directory from ancestor
+                        .addPath(".vitrivius/vsum")  // Recover the entire vsum directory from ancestor
                         .call();
 
                 LOGGER.info("Successfully recovered vsum state from ancestor {} " +

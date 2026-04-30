@@ -1,29 +1,51 @@
-# Vitruv
-[![GitHub Action CI](https://github.com/vitruv-tools/Vitruv/actions/workflows/ci.yml/badge.svg)](https://github.com/vitruv-tools/Vitruv/actions/workflows/ci.yml)
-[![Latest Release](https://img.shields.io/github/release/vitruv-tools/Vitruv.svg)](https://github.com/vitruv-tools/Vitruv/releases/latest)
-[![Issues](https://img.shields.io/github/issues/vitruv-tools/Vitruv.svg)](https://github.com/vitruv-tools/Vitruv/issues)
-[![License](https://img.shields.io/github/license/vitruv-tools/Vitruv.svg)](https://raw.githubusercontent.com/vitruv-tools/Vitruv/main/LICENSE)
+# Vitruv Framework (Local Branch)
 
-[Vitruvius](https://vitruv.tools) is a framework for view-based (software) development.
-It assumes different models to be used for describing a system, which are automatically kept consistent by the framework executing (semi-)automated rules that preserve consistency.
-These models are modified only via views, which are projections from the underlying models.
-For general information on Vitruvius, see our [GitHub Organisation](https://github.com/vitruv-tools) and our [Wiki](https://github.com/vitruv-tools/.github/wiki).
+This repository contains the core Vitruv framework for view-based model development.  
+In this codebase, the shared model state is handled by `VirtualModel`, and consistency is maintained by propagating changes across related models.
 
-This project contains the central Vitruvius framework, providing the definition of a V-SUM (Virtual Single Underlying Model) containing development artifacts to be kept consistent and to be accessed and modified via views.
-In the implementation, a V-SUM is called `VirtualModel`, which is instantiated with a set of `ChangePropagationSpecifications` (no matter whether they are developed with the [Vitruv-DSLs](https://github.com/vitruv-tools/Vitruv-DSLs) or just as an implementation of the interface defined in the [Vitruv-Change](https://github.com/vitruv-tools/Vitruv-Change) repository).
-The `VirtualModel` then provides functionality to derive and modify views and to propagate the changes in these views back to the `VirtualModel`, which then executes the `ChangePropagationSpecifications` to preserve consistency.
+The current branch is centered on VSUM merge and conflict behavior in `vsum`, especially around branch-aware storage, semantic conflict detection, and conflict classification data that will be used by upcoming auto-resolution flow.
 
-## Framework-internal Dependencies
+## Repository structure
 
-This project depends on the following other projects from the Vitruvius framework:
-- [Vitruv-Change](https://github.com/vitruv-tools/Vitruv-Change)
+The root build contains five modules: `views`, `vsum`, `testutils`, `applications`, and `p2wrappers`.
 
-## Module Overview
+`views` provides view abstractions and implementations.  
+`vsum` contains the virtual model runtime, branch operations, changelog handling, and merge/conflict logic.  
+`testutils` contains shared test utilities.  
+`applications` contains application-level integration and registration code.  
+`p2wrappers` contains wrapper artifacts used by the framework build.
 
-| Name         | Description                                                                                  |
-|--------------|----------------------------------------------------------------------------------------------|
-| views        | Definition of view types on the underlying models.                                           |
-| vsum         | Definition of V-SUMs with consistency preservation rules between meta-models and view types. |
-| remote       | Client-server infrastructure for working with V-SUMs.                                        |
-| applications | Definition of and registry for V-SUMs.                                                       |
-| *testutils*  | *Utilities for testing in Vitruvius or V-SUM projects.*                                      |
+## What is implemented in this branch so far
+
+The main merge flow is handled by `MergeManager`, which performs Git merges through JGit, records merge metadata, and tracks both deletion and update conflicts from semantic changelogs. Conflict outcomes are represented through `ModelMergeResult`, including successful, fast-forward, conflicting, and failed merge states.
+
+Commit flow is handled by `CommitManager`. It stages model files, writes branch metadata updates, creates commits, and triggers post-commit processing. When semantic tracking is attached, commit-time semantic changelog data is also written through `SemanticChangelogManager`.
+
+`VsumFileSystemLayout` now supports two storage modes. Inside a Git repository it uses branch-aware paths under `.vitruvius/vsum/<branch>`. Outside a Git repository it falls back to a legacy `vsum` folder, so non-Git test environments still work correctly. This behavior is covered by `VsumFileSystemLayoutTest`.
+
+For update conflicts, `UpdateConflict` now stores explicit origin permutations (`O_O`, `O_C`, `C_O`, `C_C`, `UNKNOWN_UNKNOWN`) and a fundamental conflict type (`SYNTACTIC` or `SEMANTIC`). These tags are computed from semantic change entries and are used directly in severity calculation. `UpdateConflictAnalyzer` now logs the computed permutation, type, and resulting severity when conflicts are detected.
+
+At this stage, conflict resolution is still manual once a merge is marked `CONFLICTING`. The classification and severity wiring above is in place to support the next step, which is controlled auto-resolution paths.
+
+The workflow is also available in the activity diagram as SVG. 
+
+## Dependency setup
+
+This branch currently uses a local `Vitruv-Change` version in `pom.xml`:
+`vitruv-change.version=3.2.4-mybranch-SNAPSHOT`.
+
+If this version is not present in your local Maven repository, build and install the matching `Vitruv-Change` branch first. Without that, Maven dependency resolution will fail even if this repository itself is correct. The reason for it because I was getting errors on mvn build so I did as a workaround. Changing `vitruv-change.version=3.2.4-mybranch-SNAPSHOT` to `vitruv-change.version=3.2.4-SNAPSHOT` would solve the issue
+
+## Build and test
+
+To build the whole project:
+
+```bash
+mvn clean install
+```
+
+To work only on VSUM:
+
+```bash
+mvn -pl vsum test
+```

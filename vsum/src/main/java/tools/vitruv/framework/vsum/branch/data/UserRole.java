@@ -5,6 +5,7 @@ package tools.vitruv.framework.vsum.branch.data;
  *
  * <p>User roles govern what actions are permitted during conflict resolution:
  * <ul>
+ *   <li> Probably should be changed, since the roles are not known and subject to change.
  *   <li>{@link #JUNIOR} — cannot approve high-impact deletions, must escalate</li>
  *   <li>{@link #SENIOR} — can approve all deletions with confirmation</li>
  *   <li>{@link #ARCHITECT} — full access, can auto-approve or override any policy</li>

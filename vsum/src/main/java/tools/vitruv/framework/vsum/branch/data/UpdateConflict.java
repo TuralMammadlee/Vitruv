@@ -1,6 +1,5 @@
 package tools.vitruv.framework.vsum.branch.data;
 
-import tools.vitruv.framework.vsum.branch.storage.ChangeOrigin;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangeEntry;
 
 import java.util.Objects;
@@ -16,9 +15,10 @@ import java.util.Objects;
  * <p>Unlike a {@link DeletionConflict}, neither branch deletes the element;
  * the model stays intact, but the final attribute/reference value is ambiguous.
  *
- * <p>Severity is always {@link ConflictSeverity#MEDIUM} for a single feature
- * collision, but escalates to {@link ConflictSeverity#HIGH} when multiple
- * features on the same element conflict simultaneously.
+ * <p>Each conflict is tagged with an {@link OriginPermutation} (who edited each
+ * side) and a {@link FundamentalConflictType} (attribute vs. reference/topology).
+ * Both tags are computed in the constructor from the supplied entries and feed
+ * into {@link #getSeverity()}.
  */
 public class UpdateConflict {
 
@@ -29,9 +29,13 @@ public class UpdateConflict {
     private final String targetBranch;
     private final SemanticChangeEntry sourceEntry;
     private final SemanticChangeEntry targetEntry;
+    private final OriginPermutation originPermutation;
+    private final FundamentalConflictType fundamentalType;
 
     /**
-     * Creates an update conflict.
+     * Creates an update conflict. {@link OriginPermutation} and
+     * {@link FundamentalConflictType} are derived from the supplied entries
+     * so that callers cannot forget to set them.
      *
      * @param elementUuid  UUID of the element both branches modified.
      * @param eClass       EClass name of the element (for display).
@@ -51,6 +55,9 @@ public class UpdateConflict {
         this.targetBranch = Objects.requireNonNull(targetBranch);
         this.sourceEntry = Objects.requireNonNull(sourceEntry);
         this.targetEntry = Objects.requireNonNull(targetEntry);
+        this.originPermutation = OriginPermutation.of(sourceEntry.getOrigin(), targetEntry.getOrigin());
+        this.fundamentalType = FundamentalConflictType.combine(
+                sourceEntry.getChangeType(), targetEntry.getChangeType());
     }
 
     public String getElementUuid() { return elementUuid; }
@@ -62,39 +69,70 @@ public class UpdateConflict {
     public SemanticChangeEntry getTargetEntry() { return targetEntry; }
 
     /**
-     * Returns the severity. Update conflicts are MEDIUM severity — the data is
-     * not lost, but the final value is ambiguous.
+     * Returns the {@link OriginPermutation} of this conflict. Drives the
+     * "original over consequential" auto-resolution rule.
+     */
+    public OriginPermutation getOriginPermutation() { return originPermutation; }
+
+    /**
+     * Returns the {@link FundamentalConflictType} of this conflict.
+     * Semantic conflicts (reference/containment) are treated as higher risk
+     * than syntactic (attribute) ones during severity calculation.
+     */
+    public FundamentalConflictType getFundamentalType() { return fundamentalType; }
+
+    /**
+     * Computes the severity from the permutation and fundamental type.
+     *
+     * <p>Rules (kept intentionally simple, in line with the in-scope wiring):
+     * <ul>
+     *   <li>{@link OriginPermutation#UNKNOWN_UNKNOWN}: {@link ConflictSeverity#MEDIUM}
+     *       (conservative: we can't reason about origins).</li>
+     *   <li>Mixed origin ({@link OriginPermutation#O_C} / {@link OriginPermutation#C_O}):
+     *       {@link ConflictSeverity#MEDIUM} — auto-resolvable in favor of the human
+     *       change, low residual risk.</li>
+     *   <li>{@link OriginPermutation#C_C}: {@link ConflictSeverity#HIGH} — both
+     *       sides are engine-generated, indicating a likely consistency-rule
+     *       collision that needs review.</li>
+     *   <li>{@link OriginPermutation#O_O}: {@link ConflictSeverity#HIGH} when the
+     *       conflict is {@link FundamentalConflictType#SEMANTIC} (reference/topology
+     *       impact), otherwise {@link ConflictSeverity#MEDIUM}.</li>
+     * </ul>
      */
     public ConflictSeverity getSeverity() {
-        return ConflictSeverity.MEDIUM;
+        if (originPermutation == OriginPermutation.UNKNOWN_UNKNOWN) {
+            return ConflictSeverity.MEDIUM;
+        }
+        if (originPermutation.isMixedOrigin()) {
+            return ConflictSeverity.MEDIUM;
+        }
+        if (originPermutation == OriginPermutation.C_C) {
+            return ConflictSeverity.HIGH;
+        }
+        return fundamentalType == FundamentalConflictType.SEMANTIC
+                ? ConflictSeverity.HIGH
+                : ConflictSeverity.MEDIUM;
     }
 
     /**
-     * Returns {@code true} if one side is ORIGINAL and the other is CONSEQUENTIAL.
-     * In this case, the ORIGINAL side should be preferred per the Vitruvius rule.
+     * Returns {@code true} if exactly one side is ORIGINAL and the other is
+     * CONSEQUENTIAL. In this case, the ORIGINAL side should be preferred per
+     * the Vitruvius rule. Delegates to {@link OriginPermutation#isMixedOrigin()}.
      */
     public boolean isOriginalVsConsequential() {
-        ChangeOrigin srcOrigin = sourceEntry.getOrigin();
-        ChangeOrigin tgtOrigin = targetEntry.getOrigin();
-        return (srcOrigin == ChangeOrigin.ORIGINAL && tgtOrigin == ChangeOrigin.CONSEQUENTIAL)
-                || (srcOrigin == ChangeOrigin.CONSEQUENTIAL && tgtOrigin == ChangeOrigin.ORIGINAL);
+        return originPermutation.isMixedOrigin();
     }
 
     /**
-     * Returns the entry that should be preferred when one side is ORIGINAL and
-     * the other is CONSEQUENTIAL. Returns {@code null} if both have the same
-     * origin (manual resolution required).
+     * Returns the entry that should be preferred when the permutation is
+     * mixed-origin. Returns {@code null} otherwise (manual resolution required).
      */
     public SemanticChangeEntry getPreferredEntry() {
-        if (sourceEntry.getOrigin() == ChangeOrigin.ORIGINAL
-                && targetEntry.getOrigin() == ChangeOrigin.CONSEQUENTIAL) {
-            return sourceEntry;
-        }
-        if (targetEntry.getOrigin() == ChangeOrigin.ORIGINAL
-                && sourceEntry.getOrigin() == ChangeOrigin.CONSEQUENTIAL) {
-            return targetEntry;
-        }
-        return null; // Same origin — no auto-preference
+        return switch (originPermutation) {
+            case O_C -> sourceEntry;
+            case C_O -> targetEntry;
+            default -> null;
+        };
     }
 
     /**

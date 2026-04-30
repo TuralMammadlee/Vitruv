@@ -16,7 +16,7 @@ import java.util.Objects;
  * <p>When status is {@link MergeStatus#CONFLICTING}, the merge has been
  * applied to the working directory but no merge commit has been created.
  * The developer must resolve the conflicts manually and commit the resolution.
- * The conflict resolution UI (MG-8) and automatic resolvers (MG-8) are
+ * The conflict resolution UI and automatic resolvers are
  * planned for a future iteration.
  *
  * <p>REST API: POST /merges (planned, implemented in Vitruv-Server in a future iteration)
@@ -35,7 +35,7 @@ public class ModelMergeResult {
         /**
          * Conflicts detected: the working directory contains conflict markers.
          * The developer must resolve conflicts manually and commit the resolution.
-         * TODO: automatic and semi-automatic resolvers (MG-8) planned for next iteration.
+         * TODO: automatic and semi-automatic resolvers for next iteration (ask).
          */
         CONFLICTING,
         /** Unexpected error : the merge could not be attempted or completed. */
@@ -63,7 +63,7 @@ public class ModelMergeResult {
     /**
      * Relative paths of files that have conflicts.
      * Empty for SUCCESS and FAST_FORWARD.
-     * TODO: used by conflict resolution UI (MG-3, MG-8) in next iteration.
+     * TODO: used by conflict resolution UI in next iteration (ask).
      */
     private final List<String> conflictingFiles;
 

@@ -157,7 +157,7 @@ public class CommitManager {
             }
 
             // Write post-commit trigger so VsumPostCommitWatcher generates the (text-based) changelog.
-            // Only trigger if model files were changed, mirrors the hook behavior.
+            // Only trigger if model files were changed.
             if (hasModelChanges) {
                 try {
                     triggerFile.createTrigger(commitSha, branch);

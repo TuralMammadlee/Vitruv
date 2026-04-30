@@ -95,7 +95,7 @@ public class UpdateConflictAnalyzer {
                         continue;
                     }
 
-                    conflicts.add(new UpdateConflict(
+                    UpdateConflict conflict = new UpdateConflict(
                             uuid,
                             sourceEntry.getEClass() != null ? sourceEntry.getEClass() : targetEntry.getEClass(),
                             feature,
@@ -103,11 +103,16 @@ public class UpdateConflictAnalyzer {
                             targetBranch,
                             sourceEntry,
                             targetEntry
-                    ));
+                    );
+                    conflicts.add(conflict);
 
-                    LOGGER.debug("Update conflict: both '{}' and '{}' modify {}.{} (uuid={})",
+                    LOGGER.debug("Update conflict: '{}' vs '{}' on {}.{} (uuid={}) "
+                                    + "[permutation={}, type={}, severity={}]",
                             sourceBranch, targetBranch,
-                            sourceEntry.getEClass(), feature, uuid);
+                            sourceEntry.getEClass(), feature, uuid,
+                            conflict.getOriginPermutation(),
+                            conflict.getFundamentalType(),
+                            conflict.getSeverity());
                 }
             }
         }

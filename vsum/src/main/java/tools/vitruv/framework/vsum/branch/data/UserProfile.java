@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 /**
- * Maps a user identity (Git email) to a {@link RoleDefinition} and tracks
+ * Maps a user identity (Git email--- probably?) to a {@link RoleDefinition} and tracks
  * whether the user has admin capability.
  *
  * <p>Admin capability is orthogonal to the domain role:

@@ -1,0 +1,389 @@
+<svg width="887pt" height="1602pt" viewBox="0.00 0.00 887.00 1602.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 1597.8)">
+<title>HITL_Activity_Diagram</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-1597.8 882.67,-1597.8 882.67,4 -4,4"/>
+<!-- StartNode -->
+<g id="node1" class="node">
+<title>StartNode</title>
+<ellipse fill="white" stroke="black" cx="591.36" cy="-1583" rx="10.8" ry="10.8"/>
+</g>
+<!-- MergeManager -->
+<g id="node9" class="node">
+<title>MergeManager</title>
+<path fill="none" stroke="black" d="M650.34,-1521.2C650.34,-1521.2 532.39,-1521.2 532.39,-1521.2 526.39,-1521.2 520.39,-1515.2 520.39,-1509.2 520.39,-1509.2 520.39,-1497.2 520.39,-1497.2 520.39,-1491.2 526.39,-1485.2 532.39,-1485.2 532.39,-1485.2 650.34,-1485.2 650.34,-1485.2 656.34,-1485.2 662.34,-1491.2 662.34,-1497.2 662.34,-1497.2 662.34,-1509.2 662.34,-1509.2 662.34,-1515.2 656.34,-1521.2 650.34,-1521.2"/>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1506.5" font-family="Helvetica,sans-Serif" font-size="11.00">MergeManager Intercepts</text>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1493.3" font-family="Helvetica,sans-Serif" font-size="11.00">JSON Changelogs</text>
+</g>
+<!-- StartNode&#45;&gt;MergeManager -->
+<g id="edge1" class="edge">
+<title>StartNode-&gt;MergeManager</title>
+<path fill="none" stroke="black" d="M591.36,-1571.9C591.36,-1571.9 591.36,-1533.07 591.36,-1533.07"/>
+<polygon fill="black" stroke="black" points="594.86,-1533.07 591.36,-1523.07 587.86,-1533.07 594.86,-1533.07"/>
+</g>
+<!-- EndNode -->
+<g id="node2" class="node">
+<title>EndNode</title>
+<ellipse fill="none" stroke="black" cx="600.36" cy="-14.8" rx="10.8" ry="10.8"/>
+<ellipse fill="none" stroke="black" cx="600.36" cy="-14.8" rx="14.8" ry="14.8"/>
+</g>
+<!-- JoinAnalyzers -->
+<g id="node3" class="node">
+<title>JoinAnalyzers</title>
+<path fill="none" stroke="black" d="M587.76,-1343.6C587.76,-1343.6 584.16,-1340 584.16,-1340 582.36,-1338.2 582.36,-1334.6 584.16,-1332.8 584.16,-1332.8 587.76,-1329.2 587.76,-1329.2 589.56,-1327.4 593.16,-1327.4 594.96,-1329.2 594.96,-1329.2 598.56,-1332.8 598.56,-1332.8 600.36,-1334.6 600.36,-1338.2 598.56,-1340 598.56,-1340 594.96,-1343.6 594.96,-1343.6 593.16,-1345.4 589.56,-1345.4 587.76,-1343.6"/>
+</g>
+<!-- Categorize -->
+<g id="node13" class="node">
+<title>Categorize</title>
+<path fill="none" stroke="black" d="M668.37,-1274.6C668.37,-1274.6 514.36,-1274.6 514.36,-1274.6 508.36,-1274.6 502.36,-1268.6 502.36,-1262.6 502.36,-1262.6 502.36,-1225.8 502.36,-1225.8 502.36,-1219.8 508.36,-1213.8 514.36,-1213.8 514.36,-1213.8 668.37,-1213.8 668.37,-1213.8 674.37,-1213.8 680.37,-1219.8 680.37,-1225.8 680.37,-1225.8 680.37,-1262.6 680.37,-1262.6 680.37,-1268.6 674.37,-1274.6 668.37,-1274.6"/>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1260.7" font-family="Helvetica,sans-Serif" font-size="11.00">Categorize Conflict Type</text>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1247.5" font-family="Helvetica,sans-Serif" font-size="11.00">(Syntactic, Semantic, Behavioral)</text>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1234.3" font-family="Helvetica,sans-Serif" font-size="11.00">&amp;</text>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1221.1" font-family="Helvetica,sans-Serif" font-size="11.00">Determine Origin Permutation</text>
+</g>
+<!-- JoinAnalyzers&#45;&gt;Categorize -->
+<g id="edge8" class="edge">
+<title>JoinAnalyzers-&gt;Categorize</title>
+<path fill="none" stroke="black" d="M591.36,-1325.09C591.36,-1325.09 591.36,-1286.53 591.36,-1286.53"/>
+<polygon fill="black" stroke="black" points="594.86,-1286.53 591.36,-1276.53 587.86,-1286.53 594.86,-1286.53"/>
+</g>
+<!-- PolicyCheck -->
+<g id="node4" class="node">
+<title>PolicyCheck</title>
+<path fill="none" stroke="black" d="M585.36,-982.8C585.36,-982.8 579.36,-976.8 579.36,-976.8 576.36,-973.8 576.36,-967.8 579.36,-964.8 579.36,-964.8 585.36,-958.8 585.36,-958.8 588.36,-955.8 594.36,-955.8 597.36,-958.8 597.36,-958.8 603.36,-964.8 603.36,-964.8 606.36,-967.8 606.36,-973.8 603.36,-976.8 603.36,-976.8 597.36,-982.8 597.36,-982.8 594.36,-985.8 588.36,-985.8 585.36,-982.8"/>
+</g>
+<!-- VotingCheck -->
+<g id="node5" class="node">
+<title>VotingCheck</title>
+<path fill="none" stroke="black" d="M496.36,-884.8C496.36,-884.8 490.36,-878.8 490.36,-878.8 487.36,-875.8 487.36,-869.8 490.36,-866.8 490.36,-866.8 496.36,-860.8 496.36,-860.8 499.36,-857.8 505.36,-857.8 508.36,-860.8 508.36,-860.8 514.36,-866.8 514.36,-866.8 517.36,-869.8 517.36,-875.8 514.36,-878.8 514.36,-878.8 508.36,-884.8 508.36,-884.8 505.36,-887.8 499.36,-887.8 496.36,-884.8"/>
+</g>
+<!-- PolicyCheck&#45;&gt;VotingCheck -->
+<g id="edge13" class="edge">
+<title>PolicyCheck-&gt;VotingCheck</title>
+<path fill="none" stroke="black" d="M583.85,-959.96C583.85,-934.5 583.85,-873 583.85,-873 583.85,-873 532.37,-873 532.37,-873"/>
+<polygon fill="black" stroke="black" points="532.37,-869.5 522.37,-873 532.37,-876.5 532.37,-869.5"/>
+<text xml:space="preserve" text-anchor="middle" x="560.17" y="-918.8" font-family="Helvetica,sans-Serif" font-size="10.00">[clearance granted]</text>
+</g>
+<!-- Halt -->
+<g id="node16" class="node">
+<title>Halt</title>
+<path fill="none" stroke="black" d="M728.18,-829.8C728.18,-829.8 636.54,-829.8 636.54,-829.8 630.54,-829.8 624.54,-823.8 624.54,-817.8 624.54,-817.8 624.54,-805.8 624.54,-805.8 624.54,-799.8 630.54,-793.8 636.54,-793.8 636.54,-793.8 728.18,-793.8 728.18,-793.8 734.18,-793.8 740.18,-799.8 740.18,-805.8 740.18,-805.8 740.18,-817.8 740.18,-817.8 740.18,-823.8 734.18,-829.8 728.18,-829.8"/>
+<text xml:space="preserve" text-anchor="middle" x="682.36" y="-815.1" font-family="Helvetica,sans-Serif" font-size="11.00">MERGE BLOCKED</text>
+<text xml:space="preserve" text-anchor="middle" x="682.36" y="-801.9" font-family="Helvetica,sans-Serif" font-size="11.00">(Permission Denied)</text>
+</g>
+<!-- PolicyCheck&#45;&gt;Halt -->
+<g id="edge12" class="edge">
+<title>PolicyCheck-&gt;Halt</title>
+<path fill="none" stroke="black" d="M598.09,-959.32C598.09,-923.78 598.09,-818 598.09,-818 598.09,-818 612.78,-818 612.78,-818"/>
+<polygon fill="black" stroke="black" points="612.78,-821.5 622.78,-818 612.78,-814.5 612.78,-821.5"/>
+<text xml:space="preserve" text-anchor="middle" x="715.22" y="-918.8" font-family="Helvetica,sans-Serif" font-size="10.00">[clearance denied]</text>
+</g>
+<!-- AutoCheck -->
+<g id="node6" class="node">
+<title>AutoCheck</title>
+<path fill="none" stroke="black" d="M194.36,-762.8C194.36,-762.8 188.36,-756.8 188.36,-756.8 185.36,-753.8 185.36,-747.8 188.36,-744.8 188.36,-744.8 194.36,-738.8 194.36,-738.8 197.36,-735.8 203.36,-735.8 206.36,-738.8 206.36,-738.8 212.36,-744.8 212.36,-744.8 215.36,-747.8 215.36,-753.8 212.36,-756.8 212.36,-756.8 206.36,-762.8 206.36,-762.8 203.36,-765.8 197.36,-765.8 194.36,-762.8"/>
+</g>
+<!-- VotingCheck&#45;&gt;AutoCheck -->
+<g id="edge15" class="edge">
+<title>VotingCheck-&gt;AutoCheck</title>
+<path fill="none" stroke="black" d="M483.92,-873C418.36,-873 200.36,-873 200.36,-873 200.36,-873 200.36,-780.87 200.36,-780.87"/>
+<polygon fill="black" stroke="black" points="203.86,-780.87 200.36,-770.87 196.86,-780.87 203.86,-780.87"/>
+<text xml:space="preserve" text-anchor="middle" x="319.6" y="-808.8" font-family="Helvetica,sans-Serif" font-size="10.00">[single user flow]</text>
+</g>
+<!-- InitVoting -->
+<g id="node22" class="node">
+<title>InitVoting</title>
+<path fill="none" stroke="black" d="M582.34,-768.8C582.34,-768.8 464.39,-768.8 464.39,-768.8 458.39,-768.8 452.39,-762.8 452.39,-756.8 452.39,-756.8 452.39,-744.8 452.39,-744.8 452.39,-738.8 458.39,-732.8 464.39,-732.8 464.39,-732.8 582.34,-732.8 582.34,-732.8 588.34,-732.8 594.34,-738.8 594.34,-744.8 594.34,-744.8 594.34,-756.8 594.34,-756.8 594.34,-762.8 588.34,-768.8 582.34,-768.8"/>
+<text xml:space="preserve" text-anchor="middle" x="523.36" y="-747.5" font-family="Helvetica,sans-Serif" font-size="11.00">Initiate Voting Mechanism</text>
+</g>
+<!-- VotingCheck&#45;&gt;InitVoting -->
+<g id="edge14" class="edge">
+<title>VotingCheck-&gt;InitVoting</title>
+<path fill="none" stroke="black" d="M502.36,-854.27C502.36,-854.27 502.36,-780.62 502.36,-780.62"/>
+<polygon fill="black" stroke="black" points="505.86,-780.62 502.36,-770.62 498.86,-780.62 505.86,-780.62"/>
+<text xml:space="preserve" text-anchor="middle" x="561" y="-808.8" font-family="Helvetica,sans-Serif" font-size="10.00">[high risk / voting required]</text>
+</g>
+<!-- UIStrategy -->
+<g id="node17" class="node">
+<title>UIStrategy</title>
+<path fill="none" stroke="black" d="M387.17,-670.8C387.17,-670.8 265.55,-670.8 265.55,-670.8 259.55,-670.8 253.55,-664.8 253.55,-658.8 253.55,-658.8 253.55,-646.8 253.55,-646.8 253.55,-640.8 259.55,-634.8 265.55,-634.8 265.55,-634.8 387.17,-634.8 387.17,-634.8 393.17,-634.8 399.17,-640.8 399.17,-646.8 399.17,-646.8 399.17,-658.8 399.17,-658.8 399.17,-664.8 393.17,-670.8 387.17,-670.8"/>
+<text xml:space="preserve" text-anchor="middle" x="326.36" y="-656.1" font-family="Helvetica,sans-Serif" font-size="11.00">ConflictResolutionStrategy</text>
+<text xml:space="preserve" text-anchor="middle" x="326.36" y="-642.9" font-family="Helvetica,sans-Serif" font-size="11.00">(Pluggable UI)</text>
+</g>
+<!-- AutoCheck&#45;&gt;UIStrategy -->
+<g id="edge22" class="edge">
+<title>AutoCheck-&gt;UIStrategy</title>
+<path fill="none" stroke="black" d="M218.65,-751C237.69,-751 264.78,-751 264.78,-751 264.78,-751 264.78,-682.78 264.78,-682.78"/>
+<polygon fill="black" stroke="black" points="268.28,-682.78 264.78,-672.78 261.28,-682.78 268.28,-682.78"/>
+<text xml:space="preserve" text-anchor="middle" x="251.72" y="-698.8" font-family="Helvetica,sans-Serif" font-size="10.00">[intervention required]</text>
+</g>
+<!-- AutoResolve -->
+<g id="node21" class="node">
+<title>AutoResolve</title>
+<path fill="none" stroke="black" d="M128.72,-609.8C128.72,-609.8 12,-609.8 12,-609.8 6,-609.8 0,-603.8 0,-597.8 0,-597.8 0,-574.2 0,-574.2 0,-568.2 6,-562.2 12,-562.2 12,-562.2 128.72,-562.2 128.72,-562.2 134.72,-562.2 140.72,-568.2 140.72,-574.2 140.72,-574.2 140.72,-597.8 140.72,-597.8 140.72,-603.8 134.72,-609.8 128.72,-609.8"/>
+<text xml:space="preserve" text-anchor="middle" x="70.36" y="-595.9" font-family="Helvetica,sans-Serif" font-size="11.00">Automated Resolution</text>
+<text xml:space="preserve" text-anchor="middle" x="70.36" y="-582.7" font-family="Helvetica,sans-Serif" font-size="11.00">(Favor Human Change or</text>
+<text xml:space="preserve" text-anchor="middle" x="70.36" y="-569.5" font-family="Helvetica,sans-Serif" font-size="11.00">Domain-Specific Default)</text>
+</g>
+<!-- AutoCheck&#45;&gt;AutoResolve -->
+<g id="edge21" class="edge">
+<title>AutoCheck-&gt;AutoResolve</title>
+<path fill="none" stroke="black" d="M200.36,-732.22C200.36,-689.12 200.36,-586 200.36,-586 200.36,-586 152.58,-586 152.58,-586"/>
+<polygon fill="black" stroke="black" points="152.58,-582.5 142.58,-586 152.58,-589.5 152.58,-582.5"/>
+<text xml:space="preserve" text-anchor="middle" x="90.11" y="-698.8" font-family="Helvetica,sans-Serif" font-size="10.00">[auto resolve possible]</text>
+</g>
+<!-- JoinToAudit -->
+<g id="node7" class="node">
+<title>JoinToAudit</title>
+<path fill="none" stroke="black" d="M458.76,-272.6C458.76,-272.6 455.16,-269 455.16,-269 453.36,-267.2 453.36,-263.6 455.16,-261.8 455.16,-261.8 458.76,-258.2 458.76,-258.2 460.56,-256.4 464.16,-256.4 465.96,-258.2 465.96,-258.2 469.56,-261.8 469.56,-261.8 471.36,-263.6 471.36,-267.2 469.56,-269 469.56,-269 465.96,-272.6 465.96,-272.6 464.16,-274.4 460.56,-274.4 458.76,-272.6"/>
+</g>
+<!-- AuditLog -->
+<g id="node27" class="node">
+<title>AuditLog</title>
+<path fill="none" stroke="black" d="M579.68,-203.6C579.68,-203.6 381.05,-203.6 381.05,-203.6 375.05,-203.6 369.05,-197.6 369.05,-191.6 369.05,-191.6 369.05,-179.6 369.05,-179.6 369.05,-173.6 375.05,-167.6 381.05,-167.6 381.05,-167.6 579.68,-167.6 579.68,-167.6 585.68,-167.6 591.68,-173.6 591.68,-179.6 591.68,-179.6 591.68,-191.6 591.68,-191.6 591.68,-197.6 585.68,-203.6 579.68,-203.6"/>
+<text xml:space="preserve" text-anchor="middle" x="480.36" y="-188.9" font-family="Helvetica,sans-Serif" font-size="11.00">AuditLogger Synchronous Disk Write</text>
+<text xml:space="preserve" text-anchor="middle" x="480.36" y="-175.7" font-family="Helvetica,sans-Serif" font-size="11.00">(Logs Decision, Annotations, Risk Metrics)</text>
+</g>
+<!-- JoinToAudit&#45;&gt;AuditLog -->
+<g id="edge29" class="edge">
+<title>JoinToAudit-&gt;AuditLog</title>
+<path fill="none" stroke="black" d="M462.36,-253.97C462.36,-253.97 462.36,-215.31 462.36,-215.31"/>
+<polygon fill="black" stroke="black" points="465.86,-215.31 462.36,-205.31 458.86,-215.31 465.86,-215.31"/>
+</g>
+<!-- UINote -->
+<g id="node8" class="node">
+<title>UINote</title>
+<polygon fill="none" stroke="black" points="388.71,-768.8 276.01,-768.8 276.01,-732.8 394.71,-732.8 394.71,-762.8 388.71,-768.8"/>
+<polyline fill="none" stroke="black" points="388.71,-768.8 388.71,-762.8"/>
+<polyline fill="none" stroke="black" points="394.71,-762.8 388.71,-762.8"/>
+<text xml:space="preserve" text-anchor="middle" x="335.36" y="-754.1" font-family="Helvetica,sans-Serif" font-size="11.00">UI can be CLI or GUI</text>
+<text xml:space="preserve" text-anchor="middle" x="335.36" y="-740.9" font-family="Helvetica,sans-Serif" font-size="11.00">(Strategy Pattern)</text>
+</g>
+<!-- UINote&#45;&gt;UIStrategy -->
+<g id="edge23" class="edge">
+<title>UINote-&gt;UIStrategy</title>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M335.36,-732.37C335.36,-714.85 335.36,-688.64 335.36,-671.15"/>
+</g>
+<!-- DeletionAnalyzer -->
+<g id="node10" class="node">
+<title>DeletionAnalyzer</title>
+<path fill="none" stroke="black" d="M449.28,-1434.2C449.28,-1434.2 337.44,-1434.2 337.44,-1434.2 331.44,-1434.2 325.44,-1428.2 325.44,-1422.2 325.44,-1422.2 325.44,-1410.2 325.44,-1410.2 325.44,-1404.2 331.44,-1398.2 337.44,-1398.2 337.44,-1398.2 449.28,-1398.2 449.28,-1398.2 455.28,-1398.2 461.28,-1404.2 461.28,-1410.2 461.28,-1410.2 461.28,-1422.2 461.28,-1422.2 461.28,-1428.2 455.28,-1434.2 449.28,-1434.2"/>
+<text xml:space="preserve" text-anchor="middle" x="393.36" y="-1419.5" font-family="Helvetica,sans-Serif" font-size="11.00">DeletionConflictAnalyzer</text>
+<text xml:space="preserve" text-anchor="middle" x="393.36" y="-1406.3" font-family="Helvetica,sans-Serif" font-size="11.00">(Missing Parent Scans)</text>
+</g>
+<!-- MergeManager&#45;&gt;DeletionAnalyzer -->
+<g id="edge2" class="edge">
+<title>MergeManager-&gt;DeletionAnalyzer</title>
+<path fill="none" stroke="black" d="M520.16,-1503C463.39,-1503 393.36,-1503 393.36,-1503 393.36,-1503 393.36,-1446.12 393.36,-1446.12"/>
+<polygon fill="black" stroke="black" points="396.86,-1446.12 393.36,-1436.12 389.86,-1446.12 396.86,-1446.12"/>
+</g>
+<!-- UpdateAnalyzer -->
+<g id="node11" class="node">
+<title>UpdateAnalyzer</title>
+<path fill="none" stroke="black" d="M651.7,-1434.2C651.7,-1434.2 531.02,-1434.2 531.02,-1434.2 525.02,-1434.2 519.02,-1428.2 519.02,-1422.2 519.02,-1422.2 519.02,-1410.2 519.02,-1410.2 519.02,-1404.2 525.02,-1398.2 531.02,-1398.2 531.02,-1398.2 651.7,-1398.2 651.7,-1398.2 657.7,-1398.2 663.7,-1404.2 663.7,-1410.2 663.7,-1410.2 663.7,-1422.2 663.7,-1422.2 663.7,-1428.2 657.7,-1434.2 651.7,-1434.2"/>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1419.5" font-family="Helvetica,sans-Serif" font-size="11.00">UpdateConflictAnalyzer</text>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1406.3" font-family="Helvetica,sans-Serif" font-size="11.00">(UUID+Feature Collisions)</text>
+</g>
+<!-- MergeManager&#45;&gt;UpdateAnalyzer -->
+<g id="edge3" class="edge">
+<title>MergeManager-&gt;UpdateAnalyzer</title>
+<path fill="none" stroke="black" d="M591.36,-1484.75C591.36,-1484.75 591.36,-1446.14 591.36,-1446.14"/>
+<polygon fill="black" stroke="black" points="594.86,-1446.14 591.36,-1436.14 587.86,-1446.14 594.86,-1446.14"/>
+</g>
+<!-- DomainValidator -->
+<g id="node12" class="node">
+<title>DomainValidator</title>
+<path fill="none" stroke="black" d="M866.67,-1434.2C866.67,-1434.2 734.06,-1434.2 734.06,-1434.2 728.06,-1434.2 722.06,-1428.2 722.06,-1422.2 722.06,-1422.2 722.06,-1410.2 722.06,-1410.2 722.06,-1404.2 728.06,-1398.2 734.06,-1398.2 734.06,-1398.2 866.67,-1398.2 866.67,-1398.2 872.67,-1398.2 878.67,-1404.2 878.67,-1410.2 878.67,-1410.2 878.67,-1422.2 878.67,-1422.2 878.67,-1428.2 872.67,-1434.2 866.67,-1434.2"/>
+<text xml:space="preserve" text-anchor="middle" x="800.36" y="-1419.5" font-family="Helvetica,sans-Serif" font-size="11.00">Domain-Specific Validator</text>
+<text xml:space="preserve" text-anchor="middle" x="800.36" y="-1406.3" font-family="Helvetica,sans-Serif" font-size="11.00">(Behavioral Checks &amp; Rules)</text>
+</g>
+<!-- MergeManager&#45;&gt;DomainValidator -->
+<g id="edge4" class="edge">
+<title>MergeManager-&gt;DomainValidator</title>
+<path fill="none" stroke="black" d="M662.7,-1503C723.25,-1503 800.36,-1503 800.36,-1503 800.36,-1503 800.36,-1446.12 800.36,-1446.12"/>
+<polygon fill="black" stroke="black" points="803.86,-1446.12 800.36,-1436.12 796.86,-1446.12 803.86,-1446.12"/>
+</g>
+<!-- DeletionAnalyzer&#45;&gt;JoinAnalyzers -->
+<g id="edge5" class="edge">
+<title>DeletionAnalyzer-&gt;JoinAnalyzers</title>
+<path fill="none" stroke="black" d="M456.83,-1398C456.83,-1374.34 456.83,-1336 456.83,-1336 456.83,-1336 568.84,-1336 568.84,-1336"/>
+<polygon fill="black" stroke="black" points="568.84,-1339.5 578.84,-1336 568.84,-1332.5 568.84,-1339.5"/>
+</g>
+<!-- UpdateAnalyzer&#45;&gt;JoinAnalyzers -->
+<g id="edge6" class="edge">
+<title>UpdateAnalyzer-&gt;JoinAnalyzers</title>
+<path fill="none" stroke="black" d="M591.36,-1398.09C591.36,-1398.09 591.36,-1359.29 591.36,-1359.29"/>
+<polygon fill="black" stroke="black" points="594.86,-1359.29 591.36,-1349.29 587.86,-1359.29 594.86,-1359.29"/>
+</g>
+<!-- DomainValidator&#45;&gt;JoinAnalyzers -->
+<g id="edge7" class="edge">
+<title>DomainValidator-&gt;JoinAnalyzers</title>
+<path fill="none" stroke="black" d="M731.12,-1398C731.12,-1374.34 731.12,-1336 731.12,-1336 731.12,-1336 613.84,-1336 613.84,-1336"/>
+<polygon fill="black" stroke="black" points="613.84,-1332.5 603.84,-1336 613.84,-1339.5 613.84,-1332.5"/>
+</g>
+<!-- CalcSeverity -->
+<g id="node14" class="node">
+<title>CalcSeverity</title>
+<path fill="none" stroke="black" d="M649.41,-1162.8C649.41,-1162.8 533.31,-1162.8 533.31,-1162.8 527.31,-1162.8 521.31,-1156.8 521.31,-1150.8 521.31,-1150.8 521.31,-1138.8 521.31,-1138.8 521.31,-1132.8 527.31,-1126.8 533.31,-1126.8 533.31,-1126.8 649.41,-1126.8 649.41,-1126.8 655.41,-1126.8 661.41,-1132.8 661.41,-1138.8 661.41,-1138.8 661.41,-1150.8 661.41,-1150.8 661.41,-1156.8 655.41,-1162.8 649.41,-1162.8"/>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1148.1" font-family="Helvetica,sans-Serif" font-size="11.00">Calculate Impact &amp;</text>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1134.9" font-family="Helvetica,sans-Serif" font-size="11.00">Compute ConflictSeverity</text>
+</g>
+<!-- Categorize&#45;&gt;CalcSeverity -->
+<g id="edge9" class="edge">
+<title>Categorize-&gt;CalcSeverity</title>
+<path fill="none" stroke="black" d="M591.36,-1213.57C591.36,-1213.57 591.36,-1174.56 591.36,-1174.56"/>
+<polygon fill="black" stroke="black" points="594.86,-1174.56 591.36,-1164.56 587.86,-1174.56 594.86,-1174.56"/>
+</g>
+<!-- IdentUser -->
+<g id="node15" class="node">
+<title>IdentUser</title>
+<path fill="none" stroke="black" d="M673.57,-1075.8C673.57,-1075.8 509.15,-1075.8 509.15,-1075.8 503.15,-1075.8 497.15,-1069.8 497.15,-1063.8 497.15,-1063.8 497.15,-1051.8 497.15,-1051.8 497.15,-1045.8 503.15,-1039.8 509.15,-1039.8 509.15,-1039.8 673.57,-1039.8 673.57,-1039.8 679.57,-1039.8 685.57,-1045.8 685.57,-1051.8 685.57,-1051.8 685.57,-1063.8 685.57,-1063.8 685.57,-1069.8 679.57,-1075.8 673.57,-1075.8"/>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1061.1" font-family="Helvetica,sans-Serif" font-size="11.00">RoleManager Identity Verification &amp;</text>
+<text xml:space="preserve" text-anchor="middle" x="591.36" y="-1047.9" font-family="Helvetica,sans-Serif" font-size="11.00">Assign Roles to Conflict</text>
+</g>
+<!-- CalcSeverity&#45;&gt;IdentUser -->
+<g id="edge10" class="edge">
+<title>CalcSeverity-&gt;IdentUser</title>
+<path fill="none" stroke="black" d="M591.36,-1126.35C591.36,-1126.35 591.36,-1087.74 591.36,-1087.74"/>
+<polygon fill="black" stroke="black" points="594.86,-1087.74 591.36,-1077.74 587.86,-1087.74 594.86,-1087.74"/>
+</g>
+<!-- IdentUser&#45;&gt;PolicyCheck -->
+<g id="edge11" class="edge">
+<title>IdentUser-&gt;PolicyCheck</title>
+<path fill="none" stroke="black" d="M591.36,-1039.35C591.36,-1039.35 591.36,-1000.74 591.36,-1000.74"/>
+<polygon fill="black" stroke="black" points="594.86,-1000.74 591.36,-990.74 587.86,-1000.74 594.86,-1000.74"/>
+</g>
+<!-- Halt&#45;&gt;EndNode -->
+<g id="edge32" class="edge">
+<title>Halt-&gt;EndNode</title>
+<path fill="none" stroke="black" d="M624.19,-806C613.48,-806 605.61,-806 605.61,-806 605.61,-806 605.61,-40.38 605.61,-40.38"/>
+<polygon fill="black" stroke="black" points="609.11,-40.38 605.61,-30.38 602.11,-40.38 609.11,-40.38"/>
+</g>
+<!-- ViewHistory -->
+<g id="node18" class="node">
+<title>ViewHistory</title>
+<path fill="none" stroke="black" d="M384.88,-537.2C384.88,-537.2 271.84,-537.2 271.84,-537.2 265.84,-537.2 259.84,-531.2 259.84,-525.2 259.84,-525.2 259.84,-513.2 259.84,-513.2 259.84,-507.2 265.84,-501.2 271.84,-501.2 271.84,-501.2 384.88,-501.2 384.88,-501.2 390.88,-501.2 396.88,-507.2 396.88,-513.2 396.88,-513.2 396.88,-525.2 396.88,-525.2 396.88,-531.2 390.88,-537.2 384.88,-537.2"/>
+<text xml:space="preserve" text-anchor="middle" x="328.36" y="-522.5" font-family="Helvetica,sans-Serif" font-size="11.00">User Views Conflict</text>
+<text xml:space="preserve" text-anchor="middle" x="328.36" y="-509.3" font-family="Helvetica,sans-Serif" font-size="11.00">History &amp; State Previews</text>
+</g>
+<!-- UIStrategy&#45;&gt;ViewHistory -->
+<g id="edge24" class="edge">
+<title>UIStrategy-&gt;ViewHistory</title>
+<path fill="none" stroke="black" d="M328.36,-634.5C328.36,-634.5 328.36,-548.79 328.36,-548.79"/>
+<polygon fill="black" stroke="black" points="331.86,-548.79 328.36,-538.79 324.86,-548.79 331.86,-548.79"/>
+</g>
+<!-- SelectResolution -->
+<g id="node19" class="node">
+<title>SelectResolution</title>
+<path fill="none" stroke="black" d="M393.83,-450.2C393.83,-450.2 264.89,-450.2 264.89,-450.2 258.89,-450.2 252.89,-444.2 252.89,-438.2 252.89,-438.2 252.89,-426.2 252.89,-426.2 252.89,-420.2 258.89,-414.2 264.89,-414.2 264.89,-414.2 393.83,-414.2 393.83,-414.2 399.83,-414.2 405.83,-420.2 405.83,-426.2 405.83,-426.2 405.83,-438.2 405.83,-438.2 405.83,-444.2 399.83,-450.2 393.83,-450.2"/>
+<text xml:space="preserve" text-anchor="middle" x="329.36" y="-435.5" font-family="Helvetica,sans-Serif" font-size="11.00">User Selects Resolution</text>
+<text xml:space="preserve" text-anchor="middle" x="329.36" y="-422.3" font-family="Helvetica,sans-Serif" font-size="11.00">(Manual or Default Choices)</text>
+</g>
+<!-- ViewHistory&#45;&gt;SelectResolution -->
+<g id="edge25" class="edge">
+<title>ViewHistory-&gt;SelectResolution</title>
+<path fill="none" stroke="black" d="M328.36,-500.75C328.36,-500.75 328.36,-462.14 328.36,-462.14"/>
+<polygon fill="black" stroke="black" points="331.86,-462.14 328.36,-452.14 324.86,-462.14 331.86,-462.14"/>
+</g>
+<!-- AddAnnotations -->
+<g id="node20" class="node">
+<title>AddAnnotations</title>
+<path fill="none" stroke="black" d="M385.53,-363.2C385.53,-363.2 279.19,-363.2 279.19,-363.2 273.19,-363.2 267.19,-357.2 267.19,-351.2 267.19,-351.2 267.19,-339.2 267.19,-339.2 267.19,-333.2 273.19,-327.2 279.19,-327.2 279.19,-327.2 385.53,-327.2 385.53,-327.2 391.53,-327.2 397.53,-333.2 397.53,-339.2 397.53,-339.2 397.53,-351.2 397.53,-351.2 397.53,-357.2 391.53,-363.2 385.53,-363.2"/>
+<text xml:space="preserve" text-anchor="middle" x="332.36" y="-348.5" font-family="Helvetica,sans-Serif" font-size="11.00">User Adds</text>
+<text xml:space="preserve" text-anchor="middle" x="332.36" y="-335.3" font-family="Helvetica,sans-Serif" font-size="11.00">Annotations/Comments</text>
+</g>
+<!-- SelectResolution&#45;&gt;AddAnnotations -->
+<g id="edge26" class="edge">
+<title>SelectResolution-&gt;AddAnnotations</title>
+<path fill="none" stroke="black" d="M332.36,-413.75C332.36,-413.75 332.36,-375.14 332.36,-375.14"/>
+<polygon fill="black" stroke="black" points="335.86,-375.14 332.36,-365.14 328.86,-375.14 335.86,-375.14"/>
+</g>
+<!-- AddAnnotations&#45;&gt;JoinToAudit -->
+<g id="edge27" class="edge">
+<title>AddAnnotations-&gt;JoinToAudit</title>
+<path fill="none" stroke="black" d="M383.29,-326.75C383.29,-304.2 383.29,-269 383.29,-269 383.29,-269 442.98,-269 442.98,-269"/>
+<polygon fill="black" stroke="black" points="442.98,-272.5 452.98,-269 442.98,-265.5 442.98,-272.5"/>
+</g>
+<!-- AutoResolve&#45;&gt;JoinToAudit -->
+<g id="edge28" class="edge">
+<title>AutoResolve-&gt;JoinToAudit</title>
+<path fill="none" stroke="black" d="M70.36,-561.91C70.36,-486.82 70.36,-262 70.36,-262 70.36,-262 443.02,-262 443.02,-262"/>
+<polygon fill="black" stroke="black" points="443.02,-265.5 453.02,-262 443.02,-258.5 443.02,-265.5"/>
+</g>
+<!-- ReviewVoting -->
+<g id="node23" class="node">
+<title>ReviewVoting</title>
+<path fill="none" stroke="black" d="M577.14,-670.8C577.14,-670.8 469.58,-670.8 469.58,-670.8 463.58,-670.8 457.58,-664.8 457.58,-658.8 457.58,-658.8 457.58,-646.8 457.58,-646.8 457.58,-640.8 463.58,-634.8 469.58,-634.8 469.58,-634.8 577.14,-634.8 577.14,-634.8 583.14,-634.8 589.14,-640.8 589.14,-646.8 589.14,-646.8 589.14,-658.8 589.14,-658.8 589.14,-664.8 583.14,-670.8 577.14,-670.8"/>
+<text xml:space="preserve" text-anchor="middle" x="523.36" y="-656.1" font-family="Helvetica,sans-Serif" font-size="11.00">Assigned Roles Review</text>
+<text xml:space="preserve" text-anchor="middle" x="523.36" y="-642.9" font-family="Helvetica,sans-Serif" font-size="11.00">Previews &amp; History</text>
+</g>
+<!-- InitVoting&#45;&gt;ReviewVoting -->
+<g id="edge16" class="edge">
+<title>InitVoting-&gt;ReviewVoting</title>
+<path fill="none" stroke="black" d="M523.36,-732.37C523.36,-732.37 523.36,-682.66 523.36,-682.66"/>
+<polygon fill="black" stroke="black" points="526.86,-682.66 523.36,-672.66 519.86,-682.66 526.86,-682.66"/>
+</g>
+<!-- CollectVotes -->
+<g id="node24" class="node">
+<title>CollectVotes</title>
+<path fill="none" stroke="black" d="M575.53,-537.2C575.53,-537.2 469.19,-537.2 469.19,-537.2 463.19,-537.2 457.19,-531.2 457.19,-525.2 457.19,-525.2 457.19,-513.2 457.19,-513.2 457.19,-507.2 463.19,-501.2 469.19,-501.2 469.19,-501.2 575.53,-501.2 575.53,-501.2 581.53,-501.2 587.53,-507.2 587.53,-513.2 587.53,-513.2 587.53,-525.2 587.53,-525.2 587.53,-531.2 581.53,-537.2 575.53,-537.2"/>
+<text xml:space="preserve" text-anchor="middle" x="522.36" y="-522.5" font-family="Helvetica,sans-Serif" font-size="11.00">Collect Weighted Votes</text>
+<text xml:space="preserve" text-anchor="middle" x="522.36" y="-509.3" font-family="Helvetica,sans-Serif" font-size="11.00">from Roles</text>
+</g>
+<!-- ReviewVoting&#45;&gt;CollectVotes -->
+<g id="edge17" class="edge">
+<title>ReviewVoting-&gt;CollectVotes</title>
+<path fill="none" stroke="black" d="M522.56,-634.5C522.56,-634.5 522.56,-548.79 522.56,-548.79"/>
+<polygon fill="black" stroke="black" points="526.06,-548.79 522.56,-538.79 519.06,-548.79 526.06,-548.79"/>
+</g>
+<!-- DetermineOutcome -->
+<g id="node25" class="node">
+<title>DetermineOutcome</title>
+<path fill="none" stroke="black" d="M568.19,-450.2C568.19,-450.2 476.53,-450.2 476.53,-450.2 470.53,-450.2 464.53,-444.2 464.53,-438.2 464.53,-438.2 464.53,-426.2 464.53,-426.2 464.53,-420.2 470.53,-414.2 476.53,-414.2 476.53,-414.2 568.19,-414.2 568.19,-414.2 574.19,-414.2 580.19,-420.2 580.19,-426.2 580.19,-426.2 580.19,-438.2 580.19,-438.2 580.19,-444.2 574.19,-450.2 568.19,-450.2"/>
+<text xml:space="preserve" text-anchor="middle" x="522.36" y="-435.5" font-family="Helvetica,sans-Serif" font-size="11.00">Determine Majority</text>
+<text xml:space="preserve" text-anchor="middle" x="522.36" y="-422.3" font-family="Helvetica,sans-Serif" font-size="11.00">Resolution Outcome</text>
+</g>
+<!-- CollectVotes&#45;&gt;DetermineOutcome -->
+<g id="edge18" class="edge">
+<title>CollectVotes-&gt;DetermineOutcome</title>
+<path fill="none" stroke="black" d="M522.36,-500.75C522.36,-500.75 522.36,-462.14 522.36,-462.14"/>
+<polygon fill="black" stroke="black" points="525.86,-462.14 522.36,-452.14 518.86,-462.14 525.86,-462.14"/>
+</g>
+<!-- ComputeConfidence -->
+<g id="node26" class="node">
+<title>ComputeConfidence</title>
+<path fill="none" stroke="black" d="M566.11,-363.2C566.11,-363.2 472.61,-363.2 472.61,-363.2 466.61,-363.2 460.61,-357.2 460.61,-351.2 460.61,-351.2 460.61,-339.2 460.61,-339.2 460.61,-333.2 466.61,-327.2 472.61,-327.2 472.61,-327.2 566.11,-327.2 566.11,-327.2 572.11,-327.2 578.11,-333.2 578.11,-339.2 578.11,-339.2 578.11,-351.2 578.11,-351.2 578.11,-357.2 572.11,-363.2 566.11,-363.2"/>
+<text xml:space="preserve" text-anchor="middle" x="519.36" y="-348.5" font-family="Helvetica,sans-Serif" font-size="11.00">Compute Risk &amp;</text>
+<text xml:space="preserve" text-anchor="middle" x="519.36" y="-335.3" font-family="Helvetica,sans-Serif" font-size="11.00">Confidence Measure</text>
+</g>
+<!-- DetermineOutcome&#45;&gt;ComputeConfidence -->
+<g id="edge19" class="edge">
+<title>DetermineOutcome-&gt;ComputeConfidence</title>
+<path fill="none" stroke="black" d="M521.32,-413.75C521.32,-413.75 521.32,-375.14 521.32,-375.14"/>
+<polygon fill="black" stroke="black" points="524.82,-375.14 521.32,-365.14 517.82,-375.14 524.82,-375.14"/>
+</g>
+<!-- ComputeConfidence&#45;&gt;JoinToAudit -->
+<g id="edge20" class="edge">
+<title>ComputeConfidence-&gt;JoinToAudit</title>
+<path fill="none" stroke="black" d="M466.89,-327.09C466.89,-327.09 466.89,-283.62 466.89,-283.62"/>
+<polygon fill="black" stroke="black" points="470.39,-283.62 466.89,-273.62 463.39,-283.62 470.39,-283.62"/>
+</g>
+<!-- Apply -->
+<g id="node28" class="node">
+<title>Apply</title>
+<path fill="none" stroke="black" d="M573.84,-116.6C573.84,-116.6 444.89,-116.6 444.89,-116.6 438.89,-116.6 432.89,-110.6 432.89,-104.6 432.89,-104.6 432.89,-92.6 432.89,-92.6 432.89,-86.6 438.89,-80.6 444.89,-80.6 444.89,-80.6 573.84,-80.6 573.84,-80.6 579.84,-80.6 585.84,-86.6 585.84,-92.6 585.84,-92.6 585.84,-104.6 585.84,-104.6 585.84,-110.6 579.84,-116.6 573.84,-116.6"/>
+<text xml:space="preserve" text-anchor="middle" x="509.36" y="-95.3" font-family="Helvetica,sans-Serif" font-size="11.00">JGit Transaction Application</text>
+</g>
+<!-- AuditLog&#45;&gt;Apply -->
+<g id="edge30" class="edge">
+<title>AuditLog-&gt;Apply</title>
+<path fill="none" stroke="black" d="M509.36,-167.15C509.36,-167.15 509.36,-128.54 509.36,-128.54"/>
+<polygon fill="black" stroke="black" points="512.86,-128.54 509.36,-118.54 505.86,-128.54 512.86,-128.54"/>
+</g>
+<!-- Apply&#45;&gt;EndNode -->
+<g id="edge31" class="edge">
+<title>Apply-&gt;EndNode</title>
+<path fill="none" stroke="black" d="M586.16,-99C595.51,-99 601.85,-99 601.85,-99 601.85,-99 601.85,-41.37 601.85,-41.37"/>
+<polygon fill="black" stroke="black" points="605.35,-41.37 601.85,-31.37 598.35,-41.37 605.35,-41.37"/>
+</g>
+</g>
+</svg>
