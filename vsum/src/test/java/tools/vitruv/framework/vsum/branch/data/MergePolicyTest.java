@@ -114,6 +114,12 @@ class MergePolicyTest {
 
     /**
      * Creates a DeletionConflict with the given number of affected updates.
+     *
+     * <p>The affected updates default to {@link ChangeOrigin#CONSEQUENTIAL} so
+     * that the weighted-impact score equals {@code updateCount} and these
+     * routing tests can be expressed in terms of raw counts. Tests that need
+     * to exercise the origin-weighted formula directly live in
+     * {@code DeletionConflictTest}.
      */
     private DeletionConflict conflictWithUpdates(int updateCount) {
         List<SemanticChangeEntry> updates = new java.util.ArrayList<>();
@@ -123,7 +129,7 @@ class MergePolicyTest {
                     .changeType(SemanticChangeType.ATTRIBUTE_CHANGED)
                     .emfType("ReplaceSingleValuedEAttribute")
                     .elementUuid("uuid-" + i)
-                    .origin(ChangeOrigin.ORIGINAL)
+                    .origin(ChangeOrigin.CONSEQUENTIAL)
                     .build());
         }
         return new DeletionConflict(

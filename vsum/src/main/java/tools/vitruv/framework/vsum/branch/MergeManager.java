@@ -11,13 +11,13 @@ import org.eclipse.jgit.merge.MergeStrategy;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
+import tools.vitruv.framework.vsum.branch.data.AutoResolutionOutcome;
 import tools.vitruv.framework.vsum.branch.data.BranchMetadata;
 import tools.vitruv.framework.vsum.branch.data.BranchState;
 import tools.vitruv.framework.vsum.branch.data.DeletionConflict;
 import tools.vitruv.framework.vsum.branch.data.DeletionPolicy;
 import tools.vitruv.framework.vsum.branch.data.MergePolicy;
 import tools.vitruv.framework.vsum.branch.data.ModelMergeResult;
-//import tools.vitruv.framework.vsum.branch.data.RoleDefinition;
 import tools.vitruv.framework.vsum.branch.data.SeverityThresholds;
 import tools.vitruv.framework.vsum.branch.data.UpdateConflict;
 import tools.vitruv.framework.vsum.branch.data.ValidationResult;
@@ -26,6 +26,7 @@ import tools.vitruv.framework.vsum.branch.storage.DeletionConflictAnalyzer;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictResolver;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangelogManager;
 import tools.vitruv.framework.vsum.branch.storage.UpdateConflictAnalyzer;
+import tools.vitruv.framework.vsum.branch.storage.UpdateConflictResolver;
 import tools.vitruv.framework.vsum.branch.util.MergeResultFile;
 import tools.vitruv.framework.vsum.branch.util.MergeTriggerFile;
 
@@ -35,6 +36,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -71,6 +73,12 @@ public class MergeManager {
 
     /** Configurable severity thresholds loaded from config, or defaults. */
     private SeverityThresholds severityThresholds = SeverityThresholds.defaults();
+
+    /**
+     * Domain validator used by the auto-resolution tier for conflicts that
+     * the origin rule cannot resolve. Defaults to {@link DomainValidator#NONE}.
+     */
+    private DomainValidator domainValidator = DomainValidator.NONE;
 
     /**
      * Creates a new MergeManager for the Git repository at the given path.
@@ -223,9 +231,9 @@ public class MergeManager {
                 // only need the file paths, not the ranges
                 Map<String, int[][]> conflicts = jgitResult.getConflicts() != null ? jgitResult.getConflicts() : Map.of();
 
-                // TODO: conflict classification
-                // TODO: conflict priority assignment
-                // TODO: conflict resolution modes
+                // Conflict classification and severity are handled by UpdateConflict tags
+                // (OriginPermutation + FundamentalConflictType). Auto-resolution is done
+                // via resolveUpdateConflicts() after the caller inspects this result.
                 List<String> conflictingFiles = new ArrayList<>(conflicts.keySet());
                 LOGGER.warn("Merge resulted in {} conflict(s): {}", conflictingFiles.size(), conflictingFiles);
 
@@ -354,6 +362,21 @@ public class MergeManager {
     }
 
     /**
+     * Installs a domain-specific validator for the auto-resolution tier.
+     *
+     * <p>The validator is consulted for update conflicts that the origin rule
+     * (ORIGINAL-over-CONSEQUENTIAL) cannot resolve automatically. If not set,
+     * {@link DomainValidator#NONE} is used and only mixed-origin conflicts are
+     * auto-resolved; everything else falls through to manual resolution.
+     *
+     * @param domainValidator the validator to install, must not be null.
+     */
+    public void setDomainValidator(DomainValidator domainValidator) {
+        this.domainValidator = Objects.requireNonNull(domainValidator,
+                "domainValidator must not be null");
+    }
+
+    /**
      * Returns {@code true} if the most recent merge detected any semantic
      * conflicts (deletion or update).
      */
@@ -408,59 +431,44 @@ public class MergeManager {
     }
 
     /**
-     * Resolves update-vs-update conflicts. For conflicts where one side is
-     * ORIGINAL and the other is CONSEQUENTIAL, the ORIGINAL side is
-     * automatically preferred. For same-origin conflicts, the target
-     * branch's value is kept (target-wins default).
+     * Resolves update-vs-update conflicts using the three-tier auto-resolution
+     * strategy of {@link UpdateConflictResolver}.
      *
-     * @return the list of resolution descriptions.
+     * <p>Tier 1 (origin rule) fires first: if one side is ORIGINAL and the
+     * other is CONSEQUENTIAL, the ORIGINAL side wins without UI. Tier 2
+     * (domain validator) then handles same-origin conflicts where a
+     * domain-specific default has been registered via
+     * {@link #setDomainValidator(DomainValidator)}. Anything not resolved by
+     * either tier is placed in {@link AutoResolutionOutcome#getUnresolved()}
+     * for the UI to handle.
+     *
+     * @return an outcome describing what was auto-resolved and what still
+     *         needs manual intervention.
      */
-    public List<String> resolveUpdateConflicts() {
-        if (lastUpdateConflicts.isEmpty()) {
-            return List.of();
-        }
-        List<String> resolutions = new ArrayList<>();
-        for (UpdateConflict conflict : lastUpdateConflicts) {
-            if (conflict.isOriginalVsConsequential()) {
-                String preferred = conflict.getPreferredBranch();
-                resolutions.add(String.format(
-                        "Auto-resolved: %s.%s — preferred %s (ORIGINAL over CONSEQUENTIAL)",
-                        conflict.getEClass(), conflict.getFeatureName(), preferred));
-                LOGGER.info("Auto-resolved update conflict on {}.{}: preferred '{}' (ORIGINAL > CONSEQUENTIAL)",
-                        conflict.getEClass(), conflict.getFeatureName(), preferred);
-            } else {
-                // Both same origin → target-wins (convention)
-                resolutions.add(String.format(
-                        "Target-wins: %s.%s — both sides are %s, keeping target branch value",
-                        conflict.getEClass(), conflict.getFeatureName(),
-                        conflict.getSourceEntry().getOrigin()));
-                LOGGER.info("Target-wins for update conflict on {}.{}: both sides are {}",
-                        conflict.getEClass(), conflict.getFeatureName(),
-                        conflict.getSourceEntry().getOrigin());
-            }
-        }
-        return resolutions;
+    public AutoResolutionOutcome resolveUpdateConflicts() {
+        return new UpdateConflictResolver(domainValidator).resolve(lastUpdateConflicts);
     }
 
     /**
      * Convenience method that resolves all semantic conflicts (deletion + update)
-     * in one call. Runs deletion resolution first (interactive), then update
-     * resolution (automatic).
+     * in one call. Runs deletion resolution first (interactive via CLI), then
+     * update resolution (automatic via three-tier strategy).
      *
-     * @param mergePolicy  the policy for approval and defaults.
+     * @param mergePolicy  the policy for approval and role-based guardrails.
      * @param sourceBranch the source branch name (for ancestor lookup).
-     * @throws BranchOperationException if recovery fails.
+     * @throws BranchOperationException if ancestor recovery fails.
      */
     public void resolveAllConflicts(MergePolicy mergePolicy, String sourceBranch)
             throws BranchOperationException {
-        // 1. Resolve deletion conflicts (interactive)
         List<DeletionConflictResolver.Resolution> deletionResolutions =
                 resolveDeletionConflicts(mergePolicy, sourceBranch);
         LOGGER.info("Resolved {} deletion conflict(s)", deletionResolutions.size());
 
-        // 2. Resolve update conflicts (automatic)
-        List<String> updateResolutions = resolveUpdateConflicts();
-        LOGGER.info("Resolved {} update conflict(s)", updateResolutions.size());
+        AutoResolutionOutcome updateOutcome = resolveUpdateConflicts();
+        LOGGER.info("Update conflicts: {}/{} auto-resolved, {} require manual input",
+                updateOutcome.getAutoResolved().size(),
+                updateOutcome.totalCount(),
+                updateOutcome.getUnresolved().size());
     }
 
     /**

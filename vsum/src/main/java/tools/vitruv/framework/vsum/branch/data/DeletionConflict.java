@@ -18,8 +18,28 @@ import java.util.Objects;
  * ancestor exists from which the deleted element can be recovered.  When
  * recovery is possible, the interactive conflict resolver can offer the user
  * a "Recover from ancestor" option.
+ *
+ * <p><b>Severity is derived from a weighted impact score</b>, not the raw
+ * lost-update count. Each lost delta contributes a weight based on its
+ * {@link ChangeOrigin}: ORIGINAL (human) edits weigh
+ * {@value #ORIGINAL_WEIGHT}, CONSEQUENTIAL (engine-generated) edits weigh
+ * {@value #CONSEQUENTIAL_WEIGHT}, and UNKNOWN edits weigh
+ * {@value #UNKNOWN_WEIGHT}. The summed score is then mapped to a
+ * {@link ConflictSeverity} through the configured {@link SeverityThresholds}.
+ * This means that destroying a single human change can route a conflict to
+ * the same severity bucket as destroying multiple engine-generated changes,
+ * which is exactly the routing decision the role-based clearance system
+ * (via {@link MergePolicy} and
+ * {@link tools.vitruv.framework.vsum.branch.storage.RoleManager}) relies on.
  */
 public class DeletionConflict {
+
+    /** Weight assigned to a lost ORIGINAL (human) edit when computing impact. */
+    static final int ORIGINAL_WEIGHT = 2;
+    /** Weight assigned to a lost CONSEQUENTIAL (engine-generated) edit. */
+    static final int CONSEQUENTIAL_WEIGHT = 1;
+    /** Weight assigned to a lost edit whose origin is UNKNOWN — treated like CONSEQUENTIAL to avoid inflating noise. */
+    static final int UNKNOWN_WEIGHT = 1;
 
     private final String deletedElementUuid;
     private final String deletedElementEClass;
@@ -64,10 +84,42 @@ public class DeletionConflict {
 
     /**
      * Returns the number of updates that would be destroyed if this deletion
-     * is accepted.
+     * is accepted. This is the raw count and is used for role-based update-limit
+     * checks (see {@link RoleDefinition#canApproveUpdatesLost(int)}). For
+     * severity routing, see {@link #getWeightedImpact()}.
      */
     public int getLostUpdateCount() {
         return affectedUpdates.size();
+    }
+
+    /**
+     * Returns the weighted impact score of accepting this deletion.
+     *
+     * <p>Each affected update contributes a weight based on its
+     * {@link ChangeOrigin}:
+     * <ul>
+     *   <li>ORIGINAL (human edit) → {@value #ORIGINAL_WEIGHT}</li>
+     *   <li>CONSEQUENTIAL (engine-generated) → {@value #CONSEQUENTIAL_WEIGHT}</li>
+     *   <li>UNKNOWN → {@value #UNKNOWN_WEIGHT}</li>
+     * </ul>
+     *
+     * <p>This score is the input to {@link #getSeverity()} and therefore the
+     * value that ultimately routes the conflict to the
+     * {@link tools.vitruv.framework.vsum.branch.storage.RoleManager} for
+     * clearance.
+     */
+    public int getWeightedImpact() {
+        int total = 0;
+        for (SemanticChangeEntry update : affectedUpdates) {
+            total += weightFor(update.getOrigin());
+        }
+        return total;
+    }
+
+    private static int weightFor(ChangeOrigin origin) {
+        if (origin == ChangeOrigin.ORIGINAL) return ORIGINAL_WEIGHT;
+        if (origin == ChangeOrigin.CONSEQUENTIAL) return CONSEQUENTIAL_WEIGHT;
+        return UNKNOWN_WEIGHT;
     }
 
     /**
@@ -93,30 +145,22 @@ public class DeletionConflict {
     }
 
     /**
-     * Computes the {@link ConflictSeverity} of this conflict based on the
-     * number of updates that would be lost if the deletion is accepted.
-     *
-     * <ul>
-     *   <li>0 lost updates → {@link ConflictSeverity#LOW}</li>
-     *   <li>1–2 lost updates → {@link ConflictSeverity#MEDIUM}</li>
-     *   <li>3–9 lost updates → {@link ConflictSeverity#HIGH}</li>
-     *   <li>10+ lost updates → {@link ConflictSeverity#CRITICAL}</li>
-     * </ul>
-     */
-    /**
-     * Computes the {@link ConflictSeverity} of this conflict based on the
-     * number of updates that would be lost if the deletion is accepted, using default thresholds.
+     * Computes the {@link ConflictSeverity} of this conflict from
+     * {@link #getWeightedImpact()} using the default {@link SeverityThresholds}.
+     * Lost ORIGINAL edits contribute more to the score than lost CONSEQUENTIAL
+     * edits, so a small number of human changes can produce the same severity
+     * as a larger number of engine-generated changes.
      */
     public ConflictSeverity getSeverity() {
-        return ConflictSeverity.fromLostUpdateCount(getLostUpdateCount());
+        return ConflictSeverity.fromLostUpdateCount(getWeightedImpact());
     }
 
     /**
-     * Computes the {@link ConflictSeverity} of this conflict based on the
-     * number of updates that would be lost if the deletion is accepted, using the provided thresholds.
+     * Computes the {@link ConflictSeverity} of this conflict from
+     * {@link #getWeightedImpact()} using the supplied {@link SeverityThresholds}.
      */
     public ConflictSeverity getSeverity(SeverityThresholds thresholds) {
-        return ConflictSeverity.fromLostUpdateCount(getLostUpdateCount(), thresholds);
+        return ConflictSeverity.fromLostUpdateCount(getWeightedImpact(), thresholds);
     }
 
     @Override
@@ -126,6 +170,7 @@ public class DeletionConflict {
                 ", deletingBranch='" + deletingBranch + '\'' +
                 ", updatingBranch='" + updatingBranch + '\'' +
                 ", lostUpdates=" + affectedUpdates.size() +
+                ", weightedImpact=" + getWeightedImpact() +
                 ", severity=" + getSeverity() +
                 ", ancestorAvailable=" + ancestorAvailable +
                 ", deletionOrigin=" + deletionOrigin +
