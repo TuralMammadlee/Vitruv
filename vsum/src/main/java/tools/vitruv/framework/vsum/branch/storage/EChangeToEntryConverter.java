@@ -73,7 +73,15 @@ public class EChangeToEntryConverter {
      */
     public List<SemanticChangeEntry> convert(List<EChange<EObject>> eChanges) {
         checkNotNull(eChanges, "eChanges must not be null");
-        return eChanges.stream().map(change -> convertSingle(change, eChanges.indexOf(change), defaultOrigin)).toList();
+        // Use a counter rather than indexOf — indexOf is O(n) per call (overall O(n^2))
+        // and returns the first match, which would assign the same index to duplicate
+        // EChange instances.
+        List<SemanticChangeEntry> out = new java.util.ArrayList<>(eChanges.size());
+        int i = 0;
+        for (EChange<EObject> change : eChanges) {
+            out.add(convertSingle(change, i++, defaultOrigin));
+        }
+        return out;
     }
 
     /**
@@ -86,9 +94,12 @@ public class EChangeToEntryConverter {
      */
     public List<SemanticChangeEntry> convertAnnotated(List<SemanticChangeBuffer.AnnotatedEChange> annotatedChanges) {
         checkNotNull(annotatedChanges, "annotatedChanges must not be null");
-        return annotatedChanges.stream()
-                .map(annotated -> convertSingle(annotated.getChange(), annotatedChanges.indexOf(annotated), annotated.getOrigin()))
-                .toList();
+        List<SemanticChangeEntry> out = new java.util.ArrayList<>(annotatedChanges.size());
+        int i = 0;
+        for (SemanticChangeBuffer.AnnotatedEChange annotated : annotatedChanges) {
+            out.add(convertSingle(annotated.getChange(), i++, annotated.getOrigin()));
+        }
+        return out;
     }
 
     /**

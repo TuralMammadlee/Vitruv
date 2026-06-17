@@ -97,7 +97,8 @@ class RoleDefinitionTest {
         assertTrue(dev.canApproveUpdatesLost(0));
         assertTrue(dev.canApproveUpdatesLost(1));
         assertTrue(dev.canApproveUpdatesLost(2));
-        assertFalse(dev.canApproveUpdatesLost(3));
+        assertTrue(dev.canApproveUpdatesLost(3));   // inclusive upper bound
+        assertFalse(dev.canApproveUpdatesLost(4));
         assertFalse(dev.canApproveUpdatesLost(10));
     }
 

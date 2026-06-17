@@ -22,6 +22,8 @@ import tools.vitruv.framework.vsum.branch.data.SeverityThresholds;
 import tools.vitruv.framework.vsum.branch.data.UpdateConflict;
 import tools.vitruv.framework.vsum.branch.data.ValidationResult;
 import tools.vitruv.framework.vsum.branch.exception.BranchOperationException;
+import tools.vitruv.framework.vsum.branch.data.AuditLogEntry;
+import tools.vitruv.framework.vsum.branch.storage.AuditLogger;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictAnalyzer;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictResolver;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangelogManager;
@@ -71,7 +73,38 @@ public class MergeManager {
     /** Update-vs-update conflicts detected during the most recent merge (empty if none). */
     private List<UpdateConflict> lastUpdateConflicts = List.of();
 
-    /** Configurable severity thresholds loaded from config, or defaults. */
+    /** Source branch of the most recent conflicting merge (null if no conflict has been detected). */
+    private String lastSourceBranch = null;
+
+    /** Target branch of the most recent conflicting merge (null if no conflict has been detected). */
+    private String lastTargetBranch = null;
+
+    /**
+     * Audit logger scoped to the current merge session. A single instance — and
+     * therefore a single audit file — is created when a conflicting merge is
+     * detected, so that every deletion and update decision for that one merge is
+     * recorded in one coherent JSON array. {@code null} until a conflicting merge
+     * is detected.
+     *
+     * <p>Sharing one logger across the deletion and update resolution passes is
+     * deliberate: it removes the filename collision that two independently
+     * constructed loggers (both keyed on the same branches and a millisecond
+     * timestamp) could otherwise produce, where the second flush would silently
+     * overwrite the first.
+     *
+     * <p>Resolution methods are expected to run once per merge session (the
+     * natural {@code merge() → resolve}* lifecycle); the logger appends and
+     * re-flushes the full decision set on each pass.
+     */
+    private AuditLogger sessionAuditLogger = null;
+
+    /**
+     * Project-wide severity thresholds loaded from
+     * {@code .vitruvius/config/severity-thresholds.json}, or defaults if no
+     * config file is present.  These thresholds <em>take precedence</em> over
+     * any thresholds carried by a caller-supplied {@link MergePolicy}: see
+     * {@link #effectivePolicyFor(MergePolicy)} for the composition rule.
+     */
     private SeverityThresholds severityThresholds = SeverityThresholds.defaults();
 
     /**
@@ -96,14 +129,18 @@ public class MergeManager {
     }
 
     /**
-     * Loads severity thresholds from the config directory.
-     * Falls back to defaults if the file doesn't exist or is invalid.
+     * Loads the project-wide severity thresholds from
+     * {@code .vitruvius/config/severity-thresholds.json} and stores them in
+     * {@link #severityThresholds}. Falls back to
+     * {@link SeverityThresholds#defaults()} on any failure (file missing,
+     * unparseable, invariants violated) so that {@code MergeManager} construction
+     * never blocks merges due to admin config problems — a warning is logged instead.
      */
     private void loadSeverityThresholds() {
         try {
             Path configDir = repoRoot.resolve(".vitruvius").resolve("config");
             this.severityThresholds = SeverityThresholds.load(configDir);
-            LOGGER.debug("Severity thresholds loaded: {}", severityThresholds);
+            LOGGER.debug("Severity thresholds loaded from project config: {}", severityThresholds);
         } catch (IOException e) {
             LOGGER.warn("Failed to load severity thresholds, using defaults: {}", e.getMessage());
             this.severityThresholds = SeverityThresholds.defaults();
@@ -231,6 +268,14 @@ public class MergeManager {
                 // only need the file paths, not the ranges
                 Map<String, int[][]> conflicts = jgitResult.getConflicts() != null ? jgitResult.getConflicts() : Map.of();
 
+                // Open a single audit session for this merge so every deletion and update
+                // decision lands in one file (see sessionAuditLogger). The logger does not
+                // touch disk until flush(), so creating it here is free for conflicts that
+                // are ultimately resolved without any recorded decision.
+                this.lastSourceBranch = sourceBranch;
+                this.lastTargetBranch = targetBranch;
+                this.sessionAuditLogger = new AuditLogger(repoRoot, sourceBranch, targetBranch);
+
                 // Conflict classification and severity are handled by UpdateConflict tags
                 // (OriginPermutation + FundamentalConflictType). Auto-resolution is done
                 // via resolveUpdateConflicts() after the caller inspects this result.
@@ -263,8 +308,10 @@ public class MergeManager {
                         LOGGER.warn("{} update-vs-update conflict(s) detected",
                                 lastUpdateConflicts.size());
                     }
-                } catch (Exception e) {
-                    LOGGER.debug("Semantic conflict analysis skipped: {}", e.getMessage());
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("Semantic conflict analysis skipped (changelogs unavailable or unreadable): {}",
+                            e.getMessage());
+                    LOGGER.debug("Semantic conflict analysis failure details:", e);
                     this.lastDeletionConflicts = List.of();
                     this.lastUpdateConflicts = List.of();
                 }
@@ -355,10 +402,49 @@ public class MergeManager {
     }
 
     /**
-     * Returns the severity thresholds currently in use.
+     * Returns the project-wide severity thresholds loaded from
+     * {@code .vitruvius/config/severity-thresholds.json}, or
+     * {@link SeverityThresholds#defaults()} when no config file exists.
      */
     public SeverityThresholds getSeverityThresholds() {
         return severityThresholds;
+    }
+
+    /**
+     * Composes the effective {@link MergePolicy} used during resolution.
+     *
+     * <p>The caller-supplied policy contributes:
+     * <ul>
+     *   <li>{@link MergePolicy#getRole() role} — who is approving the merge,</li>
+     *   <li>{@link MergePolicy#getDefaultDeletionPolicy() defaultDeletionPolicy} —
+     *       the fallback for headless resolution.</li>
+     * </ul>
+     *
+     * <p>{@link MergeManager} substitutes the project-loaded
+     * {@link SeverityThresholds} for whatever thresholds the caller's policy
+     * carried.  The reason: severity boundaries are a <em>project-wide</em>
+     * concern (configured by an admin via the JSON file) and must apply
+     * uniformly regardless of which client triggered the merge.  Caller-side
+     * thresholds, if any, would otherwise let a misconfigured client lower
+     * the bar a role had been granted.
+     *
+     * <p>If the caller's policy already carries the project-loaded thresholds
+     * (the common case after they consulted {@link #getSeverityThresholds()}),
+     * the returned policy is functionally equivalent — the substitution is
+     * idempotent.
+     *
+     * @param callerPolicy the policy supplied to {@link #resolveDeletionConflicts}, never null.
+     * @return a {@link MergePolicy} with the caller's role + default-policy and the project thresholds.
+     */
+    public MergePolicy effectivePolicyFor(MergePolicy callerPolicy) {
+        Objects.requireNonNull(callerPolicy, "callerPolicy must not be null");
+        if (callerPolicy.getSeverityThresholds().equals(severityThresholds)) {
+            return callerPolicy;  // already aligned with project config — no allocation needed
+        }
+        return new MergePolicy(
+                callerPolicy.getDefaultDeletionPolicy(),
+                callerPolicy.getRole(),
+                severityThresholds);
     }
 
     /**
@@ -411,23 +497,53 @@ public class MergeManager {
         if (lastDeletionConflicts.isEmpty()) {
             return List.of();
         }
-        DeletionConflictResolver resolver = new DeletionConflictResolver(mergePolicy);
+        // Project-wide severity thresholds (loaded from .vitruvius/config/severity-thresholds.json)
+        // take precedence over caller-supplied thresholds. See effectivePolicyFor() for rationale.
+        MergePolicy effectivePolicy = effectivePolicyFor(mergePolicy);
+        DeletionConflictResolver resolver = new DeletionConflictResolver(effectivePolicy);
         List<DeletionConflictResolver.Resolution> resolutions = resolver.resolve(lastDeletionConflicts);
 
-        // Execute physical recovery for RECOVER_FROM_ANCESTOR resolutions
-        for (DeletionConflictResolver.Resolution resolution : resolutions) {
-            if (resolution.getChosenPolicy() == DeletionPolicy.RECOVER_FROM_ANCESTOR) {
-                try {
-                    recoverFromAncestor(sourceBranch, resolution.getConflict());
-                } catch (Exception e) {
-                    LOGGER.error("Failed to recover element '{}' from ancestor: {}",
-                            resolution.getConflict().getDeletedElementUuid(), e.getMessage());
-                    throw new BranchOperationException(
-                            "Ancestor recovery failed for " + resolution.getConflict().getDeletedElementUuid(), e);
-                }
+        // Persist all decisions to the audit log BEFORE any JGit operation modifies the working tree.
+        // This guarantees the human's rationale is durably on disk even if recovery fails mid-way.
+        auditDeletionResolutions(resolutions);
+
+        // Collect the conflicts that asked for ancestor recovery. A single checkout
+        // restores the whole .vitruvius/vsum directory, so running it inside the loop
+        // (as the earlier version did) wastes work and re-overwrites the tree N times.
+        List<DeletionConflict> toRecover = resolutions.stream()
+                .filter(r -> r.getChosenPolicy() == DeletionPolicy.RECOVER_FROM_ANCESTOR)
+                .map(DeletionConflictResolver.Resolution::getConflict)
+                .toList();
+
+        if (!toRecover.isEmpty()) {
+            try {
+                recoverFromAncestor(sourceBranch, toRecover);
+            } catch (IOException | GitAPIException e) {
+                String uuids = toRecover.stream()
+                        .map(DeletionConflict::getDeletedElementUuid)
+                        .collect(java.util.stream.Collectors.joining(", "));
+                LOGGER.error("Failed to recover {} element(s) from ancestor: {}", toRecover.size(), e.getMessage());
+                throw new BranchOperationException("Ancestor recovery failed for " + uuids, e);
             }
         }
         return resolutions;
+    }
+
+    /**
+     * Records the given deletion-conflict resolutions in the current merge
+     * session's audit log and flushes it synchronously to disk.
+     *
+     * <p>No-op when there are no resolutions or when no audit session is active
+     * (i.e. resolution was invoked without a preceding conflicting merge).
+     */
+    private void auditDeletionResolutions(List<DeletionConflictResolver.Resolution> resolutions) {
+        if (resolutions.isEmpty() || sessionAuditLogger == null) {
+            return;
+        }
+        for (DeletionConflictResolver.Resolution r : resolutions) {
+            sessionAuditLogger.log(AuditLogEntry.forDeletion(r, lastSourceBranch, lastTargetBranch));
+        }
+        flushSessionAuditLog();
     }
 
     /**
@@ -442,11 +558,17 @@ public class MergeManager {
      * either tier is placed in {@link AutoResolutionOutcome#getUnresolved()}
      * for the UI to handle.
      *
+     * <p>Auto-resolved decisions are appended to the current merge session's
+     * audit log so the trail is identical no matter whether callers invoke this
+     * method directly or via {@link #resolveAllConflicts}.
+     *
      * @return an outcome describing what was auto-resolved and what still
      *         needs manual intervention.
      */
     public AutoResolutionOutcome resolveUpdateConflicts() {
-        return new UpdateConflictResolver(domainValidator).resolve(lastUpdateConflicts);
+        AutoResolutionOutcome outcome = new UpdateConflictResolver(domainValidator).resolve(lastUpdateConflicts);
+        auditUpdateOutcome(outcome);
+        return outcome;
     }
 
     /**
@@ -460,10 +582,13 @@ public class MergeManager {
      */
     public void resolveAllConflicts(MergePolicy mergePolicy, String sourceBranch)
             throws BranchOperationException {
+        // Deletion conflicts — interactive; audit log is flushed synchronously inside before JGit ops
         List<DeletionConflictResolver.Resolution> deletionResolutions =
                 resolveDeletionConflicts(mergePolicy, sourceBranch);
         LOGGER.info("Resolved {} deletion conflict(s)", deletionResolutions.size());
 
+        // Update conflicts — fully automatic (three-tier strategy). resolveUpdateConflicts()
+        // records its own decisions into the same session audit log opened above.
         AutoResolutionOutcome updateOutcome = resolveUpdateConflicts();
         LOGGER.info("Update conflicts: {}/{} auto-resolved, {} require manual input",
                 updateOutcome.getAutoResolved().size(),
@@ -472,18 +597,49 @@ public class MergeManager {
     }
 
     /**
-     * Physically recovers a deleted model element by checking out its file
-     * from the merge-base (common ancestor) commit.
+     * Records the auto-resolved update decisions in the current merge session's
+     * audit log and flushes it synchronously to disk.
      *
-     * <p>Uses JGit to:
-     * <ol>
-     *   <li>Find the merge-base between HEAD and the source branch</li>
-     *   <li>Identify which XMI file contained the deleted element</li>
-     *   <li>Checkout that file from the ancestor commit into the working tree</li>
-     * </ol>
+     * <p>No-op when nothing was auto-resolved or when no audit session is active.
      */
-    private void recoverFromAncestor(String sourceBranch, DeletionConflict conflict)
+    private void auditUpdateOutcome(AutoResolutionOutcome outcome) {
+        if (outcome.getAutoResolved().isEmpty() || sessionAuditLogger == null) {
+            return;
+        }
+        for (AutoResolutionOutcome.ResolvedConflict resolved : outcome.getAutoResolved()) {
+            sessionAuditLogger.log(AuditLogEntry.forUpdateAutoResolved(resolved, lastSourceBranch, lastTargetBranch));
+        }
+        flushSessionAuditLog();
+    }
+
+    /**
+     * Flushes the current merge session's audit log to disk. The underlying
+     * {@link AuditLogger#flush()} rewrites the complete entry set, so calling
+     * this after the deletion pass and again after the update pass yields a
+     * single file containing both. Non-fatal: failures are logged, not thrown,
+     * so an audit problem never blocks the merge itself.
+     */
+    private void flushSessionAuditLog() {
+        try {
+            Path auditPath = sessionAuditLogger.flush();
+            LOGGER.info("Audit log written: {} ({} decision(s) recorded)",
+                    auditPath.getFileName(), sessionAuditLogger.size());
+        } catch (IOException e) {
+            LOGGER.warn("Failed to flush audit log (non-critical): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Physically recovers deleted model elements by checking out the
+     * {@code .vitruvius/vsum} directory from the merge-base (common ancestor)
+     * commit. One checkout restores state for every conflict in the list, so
+     * recovery for N conflicts costs one JGit operation rather than N.
+     */
+    private void recoverFromAncestor(String sourceBranch, List<DeletionConflict> conflicts)
             throws IOException, GitAPIException {
+        if (conflicts.isEmpty()) {
+            return;
+        }
         try (Git git = Git.open(repoRoot.toFile())) {
             Repository repo = git.getRepository();
 
@@ -502,28 +658,22 @@ public class MergeManager {
                 RevCommit ancestor = walk.next();
 
                 if (ancestor == null) {
-                    LOGGER.warn("No common ancestor found between HEAD and '{}'. " +
-                            "Cannot recover element '{}'", sourceBranch,
-                            conflict.getDeletedElementUuid());
+                    LOGGER.warn("No common ancestor found between HEAD and '{}'. Cannot recover {} element(s)",
+                            sourceBranch, conflicts.size());
                     return;
                 }
 
                 String ancestorSha = ancestor.getName();
-                LOGGER.info("Recovering from ancestor {} for element '{}'",
-                        ancestorSha.substring(0, 7), conflict.getDeletedElementUuid());
+                LOGGER.info("Recovering vsum state from ancestor {} for {} element(s)",
+                        ancestorSha.substring(0, 7), conflicts.size());
 
-                // Find conflicting XMI files from the deletion conflict's affected updates.
-                // The affected updates reference elements in specific files; we recover
-                // the .xmi files that were part of the Git-level conflict.
-                // Use the changelog path pattern to identify relevant files.
                 git.checkout()
                         .setStartPoint(ancestorSha)
-                        .addPath(".vitrivius/vsum")  // Recover the entire vsum directory from ancestor
+                        .addPath(".vitruvius/vsum")
                         .call();
 
-                LOGGER.info("Successfully recovered vsum state from ancestor {} " +
-                        "for conflict on element '{}'",
-                        ancestorSha.substring(0, 7), conflict.getDeletedElementUuid());
+                LOGGER.info("Successfully recovered vsum state from ancestor {} for {} conflict(s)",
+                        ancestorSha.substring(0, 7), conflicts.size());
             }
         }
     }

@@ -37,7 +37,7 @@ Git level merges that remain `CONFLICTING` always require normal Git resolution.
 
 Semantic update conflicts are surfaced by `UpdateConflictAnalyzer` when two changelog documents each contain a modifying semantic change targeting the **same element UUID** and **same feature name**. Only change types counted as edits to attributes or references participate. Lifecycle only entries are skipped because they behave differently structurally than two writers racing on one feature.
 
-Whenever such a clash is detected, the code constructs an `UpdateConflict` DTO. The constructor derives two tags from both sides synchronously, so callers cannot forget to pass them, in order to stabilize downstream decisions. **`OriginPermutation`** records which combination of ORIGINAL versus CONSEQUENTIAL appears on the incoming branch versus the current branch (`O_O`, `O_C`, `C_O`, `C_C`), with a guarded **`UNKNOWN_UNKNOWN`** whenever either side lacks a trusted origin marker. **`FundamentalConflictType`** compresses semantic change semantics into **`SYNTACTIC`** roughly when both sides manipulate primitive attribute payload only, versus **`SEMANTIC`** whenever reference, containment shaped, or unresolved structure affecting work appears on either side. That split exists because overwriting attribute values is usually narrower in blast radius than disputing topology of references.
+Whenever such a clash is detected, the code constructs an `UpdateConflict` DTO. The constructor derives two tags from both sides synchronously, so callers cannot forget to pass them, in order to stabilize downstream decisions. `**OriginPermutation`** records which combination of ORIGINAL versus CONSEQUENTIAL appears on the incoming branch versus the current branch (`O_O`, `O_C`, `C_O`, `C_C`), with a guarded `**UNKNOWN_UNKNOWN**` whenever either side lacks a trusted origin marker. `**FundamentalConflictType**` compresses semantic change semantics into `**SYNTACTIC**` roughly when both sides manipulate primitive attribute payload only, versus `**SEMANTIC**` whenever reference, containment shaped, or unresolved structure affecting work appears on either side. That split exists because overwriting attribute values is usually narrower in blast radius than disputing topology of references.
 
 Severity for updates is computed inside `UpdateConflict.getSeverity()` from the permutation and fundamental type together. Mixed origin cases stay at moderate severity because deterministic “favor the human edit” mitigation is expected afterward. Pure consequential on consequential clashes rate higher risk because consistency engines disagreed rather than humans. Original on original climbs into high tiers when topology or references are disputed, not merely attribute literals. Unknown origins stay conservatively middling rather than escalating blindly.
 
@@ -47,23 +47,23 @@ Diagnostics from the analyzer deliberately log permutation, fundamental type, an
 
 `DeletionConflictAnalyzer` aggregates delete versus update situations into `DeletionConflict` objects whose `affectedUpdates` catalogue every semantic edit on the survivor branch tied to tombstoned or removed structure. Acceptance of deletion means those deltas vanish, which is precisely what makes the conflict existential.
 
-Earlier behavior mapped severity tiers straight from **`affectedUpdates.size()`**. Here the code adds **`getWeightedImpact()`**: each doomed delta contributes an integer derived from **`ChangeOrigin`**. Human **`ORIGINAL`** edits carry heavier weight than **`CONSEQUENTIAL`** propagated edits, and **`UNKNOWN`** is aligned with consequential so missing origin metadata does not over rate impact.
+Earlier behavior mapped severity tiers straight from `**affectedUpdates.size()**`. Here the code adds `**getWeightedImpact()**`: each doomed delta contributes an integer derived from `**ChangeOrigin**`. Human `**ORIGINAL**` edits carry heavier weight than `**CONSEQUENTIAL**` propagated edits, and `**UNKNOWN**` is aligned with consequential so missing origin metadata does not over rate impact.
 
-**`getSeverity()`** feeds that summed score into the familiar **`SeverityThresholds`** ladders through **`ConflictSeverity.fromLostUpdateCount(...)`**. Administrators keep one JSON vocabulary for cutoff numbers. Only the numerator changes from blunt head count to aggregated risk.
+`**getSeverity()**` feeds that summed score into the familiar `**SeverityThresholds**` ladders through `**ConflictSeverity.fromLostUpdateCount(...)**`. Administrators keep one JSON vocabulary for cutoff numbers. Only the numerator changes from blunt head count to aggregated risk.
 
-**`getLostUpdateCount()`** still returns **`affectedUpdates.size()`** on purpose. Role policies also impose a ceiling on **how many** updates may be discarded in one decision, even when weighted severity stays modest, so count based guardrails and impact based severity stay orthogonal instead of collapsed into one number.
+`**getLostUpdateCount()**` still returns `**affectedUpdates.size()**` on purpose. Role policies also impose a ceiling on **how many** updates may be discarded in one decision, even when weighted severity stays modest, so count based guardrails and impact based severity stay orthogonal instead of collapsed into one number.
 
-Clearance ultimately still runs through **`MergePolicy.canApproveDeletion`**, combining maximum allowed severity against **`DeletionConflict#getSeverity`** and update cap checks against **`getLostUpdateCount()`**. No second approval channel was introduced.
+Clearance ultimately still runs through `**MergePolicy.canApproveDeletion**`, combining maximum allowed severity against `**DeletionConflict#getSeverity**` and update cap checks against `**getLostUpdateCount()**`. No second approval channel was introduced.
 
 ### Automatic tiers for unresolved update versus update clashes
 
-Not every contradictory update pair should wait on a modal when precedence is already spelled out elsewhere. **`UpdateConflictResolver`** walks the **`UpdateConflict`** instances from the latest merge pass in deterministic order.
+Not every contradictory update pair should wait on a modal when precedence is already spelled out elsewhere. `**UpdateConflictResolver**` walks the `**UpdateConflict**` instances from the latest merge pass in deterministic order.
 
-First, when **`OriginPermutation.isMixedOrigin()`** applies, **`getPreferredEntry()`** immediately picks the human ORIGINAL lineage so propagated edits lose without user prompts. Second, only if that rule does not apply, **`MergeManager`'s optional **`DomainValidator`** may return a **`suggestResolution`** choice, typically project specific dominance such as pinned schema versions. Third, anything still unanswered is grouped under **`AutoResolutionOutcome#getUnresolved`** for UI workflows or ticketing.
+First, when `**OriginPermutation.isMixedOrigin()**` applies, `**getPreferredEntry()**` immediately picks the human ORIGINAL lineage so propagated edits lose without user prompts. Second, only if that rule does not apply, `**MergeManager`'s optional `**DomainValidator**` may return a `**suggestResolution**` choice, typically project specific dominance such as pinned schema versions. Third, anything still unanswered is grouped under `**AutoResolutionOutcome#getUnresolved**` for UI workflows or ticketing.
 
-Those tiers classify **which side should win**, not mutate model files themselves. Applying the winners still belongs to whoever runs your merge completion pipeline. **`MergeManager.setDomainValidator`** installs collaborator logic. **`DomainValidator.NONE`** retains prior “no domain default” behavior when nothing is wired.
+Those tiers classify **which side should win**, not mutate model files themselves. Applying the winners still belongs to whoever runs your merge completion pipeline. `**MergeManager.setDomainValidator`** installs collaborator logic. `**DomainValidator.NONE**` retains prior “no domain default” behavior when nothing is wired.
 
-Regression coverage lives in **`DeletionConflictTest`** and **`UpdateConflictResolverTest`**, with existing **`UpdateConflictAnalyzerTest`** and **`MergeManagerTest`** covering surrounding merge and analyzer behavior.
+Regression coverage lives in `**DeletionConflictTest**` and `**UpdateConflictResolverTest**`, with existing `**UpdateConflictAnalyzerTest**` and `**MergeManagerTest**` covering surrounding merge and analyzer behavior.
 
 ### Activity diagram artifact
 
@@ -87,3 +87,4 @@ To work only on VSUM:
 cd vsum
 mvn test
 ```
+

@@ -1,0 +1,432 @@
+<svg width="896pt" height="2134pt" viewBox="0.00 0.00 896.00 2134.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(43.2 2090.48)">
+<title>ActivityDiagram</title>
+<polygon fill="white" stroke="none" points="-43.2,43.2 -43.2,-2090.48 852.43,-2090.48 852.43,43.2 -43.2,43.2"/>
+<!-- start -->
+<g id="node1" class="node">
+<title>start</title>
+<ellipse fill="black" stroke="black" cx="475.53" cy="-2037.2" rx="10.08" ry="10.08"/>
+</g>
+<!-- intercept -->
+<g id="node9" class="node">
+<title>intercept</title>
+<polygon fill="none" stroke="black" points="548.62,-1955.12 402.44,-1955.12 402.44,-1910.96 548.62,-1910.96 548.62,-1955.12"/>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1936.04" font-family="Helvetica,sans-Serif" font-size="10.00">MergeManager Intercepts</text>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1924.04" font-family="Helvetica,sans-Serif" font-size="10.00">JSON Changelogs</text>
+</g>
+<!-- start&#45;&gt;intercept -->
+<g id="edge1" class="edge">
+<title>start-&gt;intercept</title>
+<path fill="none" stroke="black" d="M475.53,-2026.83C475.53,-2026.83 475.53,-1964.58 475.53,-1964.58"/>
+<polygon fill="black" stroke="black" points="475.53,-1956.58 479.13,-1964.58 475.53,-1959.36 475.53,-1964.58 475.53,-1964.58 475.53,-1964.58 475.53,-1959.36 471.93,-1964.58 475.53,-1956.58"/>
+</g>
+<!-- end -->
+<g id="node2" class="node">
+<title>end</title>
+<ellipse fill="black" stroke="black" cx="493.53" cy="-15.52" rx="11.52" ry="11.52"/>
+<ellipse fill="none" stroke="black" cx="493.53" cy="-15.52" rx="15.52" ry="15.52"/>
+</g>
+<!-- fork1 -->
+<g id="node3" class="node">
+<title>fork1</title>
+<polygon fill="black" stroke="black" points="612.33,-1838.96 338.73,-1838.96 338.73,-1832.48 612.33,-1832.48 612.33,-1838.96"/>
+</g>
+<!-- del_analyzer -->
+<g id="node10" class="node">
+<title>del_analyzer</title>
+<polygon fill="none" stroke="black" points="333.84,-1760.48 193.22,-1760.48 193.22,-1716.32 333.84,-1716.32 333.84,-1760.48"/>
+<text xml:space="preserve" text-anchor="middle" x="263.53" y="-1741.4" font-family="Helvetica,sans-Serif" font-size="10.00">DeletionConflictAnalyzer</text>
+<text xml:space="preserve" text-anchor="middle" x="263.53" y="-1729.4" font-family="Helvetica,sans-Serif" font-size="10.00">(Missing Parent Scans)</text>
+</g>
+<!-- fork1&#45;&gt;del_analyzer -->
+<g id="edge3" class="edge">
+<title>fork1-&gt;del_analyzer</title>
+<path fill="none" stroke="black" d="M358.63,-1832.31C358.63,-1815.92 358.63,-1746 358.63,-1746 358.63,-1746 343.36,-1746 343.36,-1746"/>
+<polygon fill="black" stroke="black" points="335.36,-1746 343.36,-1742.4 338.14,-1746 343.36,-1746 343.36,-1746 343.36,-1746 338.14,-1746 343.36,-1749.6 335.36,-1746"/>
+</g>
+<!-- upd_analyzer -->
+<g id="node11" class="node">
+<title>upd_analyzer</title>
+<polygon fill="none" stroke="black" points="552.64,-1760.48 398.42,-1760.48 398.42,-1716.32 552.64,-1716.32 552.64,-1760.48"/>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1741.4" font-family="Helvetica,sans-Serif" font-size="10.00">UpdateConflictAnalyzer</text>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1729.4" font-family="Helvetica,sans-Serif" font-size="10.00">(UUID + Feature Collisions)</text>
+</g>
+<!-- fork1&#45;&gt;upd_analyzer -->
+<g id="edge4" class="edge">
+<title>fork1-&gt;upd_analyzer</title>
+<path fill="none" stroke="black" d="M475.53,-1832.02C475.53,-1832.02 475.53,-1769.92 475.53,-1769.92"/>
+<polygon fill="black" stroke="black" points="475.53,-1761.92 479.13,-1769.92 475.53,-1764.7 475.53,-1769.92 475.53,-1769.92 475.53,-1769.92 475.53,-1764.7 471.93,-1769.92 475.53,-1761.92"/>
+</g>
+<!-- dom_validator -->
+<g id="node12" class="node">
+<title>dom_validator</title>
+<polygon fill="none" stroke="black" points="777.29,-1760.48 617.78,-1760.48 617.78,-1716.32 777.29,-1716.32 777.29,-1760.48"/>
+<text xml:space="preserve" text-anchor="middle" x="697.53" y="-1741.4" font-family="Helvetica,sans-Serif" font-size="10.00">Domain-Specific Validator</text>
+<text xml:space="preserve" text-anchor="middle" x="697.53" y="-1729.4" font-family="Helvetica,sans-Serif" font-size="10.00">(Behavioral Checks &amp; Rules)</text>
+</g>
+<!-- fork1&#45;&gt;dom_validator -->
+<g id="edge5" class="edge">
+<title>fork1-&gt;dom_validator</title>
+<path fill="none" stroke="black" d="M572.54,-1832.31C572.54,-1815.92 572.54,-1746 572.54,-1746 572.54,-1746 608.09,-1746 608.09,-1746"/>
+<polygon fill="black" stroke="black" points="616.09,-1746 608.09,-1749.6 613.31,-1746 608.09,-1746 608.09,-1746 608.09,-1746 613.31,-1746 608.09,-1742.4 616.09,-1746"/>
+</g>
+<!-- join1 -->
+<g id="node4" class="node">
+<title>join1</title>
+<polygon fill="black" stroke="black" points="612.33,-1644.32 338.73,-1644.32 338.73,-1637.84 612.33,-1637.84 612.33,-1644.32"/>
+</g>
+<!-- categorize -->
+<g id="node13" class="node">
+<title>categorize</title>
+<polygon fill="none" stroke="black" points="565.01,-1565.84 386.05,-1565.84 386.05,-1509.68 565.01,-1509.68 565.01,-1565.84"/>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1546.76" font-family="Helvetica,sans-Serif" font-size="10.00">Categorize Conflict Type</text>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1534.76" font-family="Helvetica,sans-Serif" font-size="10.00">(Syntactic, Semantic, Behavioral)</text>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1522.76" font-family="Helvetica,sans-Serif" font-size="10.00">&amp; Determine Origin Permutation</text>
+</g>
+<!-- join1&#45;&gt;categorize -->
+<g id="edge9" class="edge">
+<title>join1-&gt;categorize</title>
+<path fill="none" stroke="black" d="M475.53,-1637.64C475.53,-1637.64 475.53,-1575.31 475.53,-1575.31"/>
+<polygon fill="black" stroke="black" points="475.53,-1567.31 479.13,-1575.3 475.53,-1570.09 475.53,-1575.31 475.53,-1575.31 475.53,-1575.31 475.53,-1570.09 471.93,-1575.31 475.53,-1567.31"/>
+</g>
+<!-- d_clearance -->
+<g id="node5" class="node">
+<title>d_clearance</title>
+<polygon fill="none" stroke="black" points="475.53,-1205.36 455.73,-1185.56 475.53,-1165.76 495.33,-1185.56 475.53,-1205.36"/>
+</g>
+<!-- d_resolve -->
+<g id="node6" class="node">
+<title>d_resolve</title>
+<polygon fill="none" stroke="black" points="383.53,-1091.48 363.73,-1071.68 383.53,-1051.88 403.33,-1071.68 383.53,-1091.48"/>
+</g>
+<!-- d_clearance&#45;&gt;d_resolve -->
+<g id="edge13" class="edge">
+<title>d_clearance-&gt;d_resolve</title>
+<path fill="none" stroke="black" d="M455.81,-1186C431.21,-1186 392.32,-1186 392.32,-1186 392.32,-1186 392.32,-1092.28 392.32,-1092.28"/>
+<polygon fill="black" stroke="black" points="392.32,-1084.28 395.92,-1092.28 392.32,-1087.06 392.32,-1092.28 392.32,-1092.28 392.32,-1092.28 392.32,-1087.06 388.72,-1092.28 392.32,-1084.28"/>
+<text xml:space="preserve" text-anchor="middle" x="353.8" y="-1173.58" font-family="Helvetica,sans-Serif" font-size="9.00">[clearance granted]</text>
+</g>
+<!-- identify_owner -->
+<g id="node24" class="node">
+<title>identify_owner</title>
+<polygon fill="none" stroke="black" points="743.75,-1093.76 545.32,-1093.76 545.32,-1049.6 743.75,-1049.6 743.75,-1093.76"/>
+<text xml:space="preserve" text-anchor="middle" x="644.53" y="-1074.68" font-family="Helvetica,sans-Serif" font-size="10.00">Identify Conflict Owner</text>
+<text xml:space="preserve" text-anchor="middle" x="644.53" y="-1062.68" font-family="Helvetica,sans-Serif" font-size="10.00">(Author of Affected Original Changes)</text>
+</g>
+<!-- d_clearance&#45;&gt;identify_owner -->
+<g id="edge27" class="edge">
+<title>d_clearance-&gt;identify_owner</title>
+<path fill="none" stroke="black" d="M495.38,-1186C519.65,-1186 557.53,-1186 557.53,-1186 557.53,-1186 557.53,-1103.21 557.53,-1103.21"/>
+<polygon fill="black" stroke="black" points="557.53,-1095.21 561.13,-1103.21 557.53,-1097.99 557.53,-1103.21 557.53,-1103.21 557.53,-1103.21 557.53,-1097.99 553.93,-1103.21 557.53,-1095.21"/>
+<text xml:space="preserve" text-anchor="middle" x="594.31" y="-1178.38" font-family="Helvetica,sans-Serif" font-size="9.00">[clearance denied]</text>
+</g>
+<!-- auto_resolve -->
+<g id="node16" class="node">
+<title>auto_resolve</title>
+<polygon fill="none" stroke="black" points="145.06,-861.44 0,-861.44 0,-805.28 145.06,-805.28 145.06,-861.44"/>
+<text xml:space="preserve" text-anchor="middle" x="72.53" y="-842.36" font-family="Helvetica,sans-Serif" font-size="10.00">Automated Resolution</text>
+<text xml:space="preserve" text-anchor="middle" x="72.53" y="-830.36" font-family="Helvetica,sans-Serif" font-size="10.00">(Favor Human Change or</text>
+<text xml:space="preserve" text-anchor="middle" x="72.53" y="-818.36" font-family="Helvetica,sans-Serif" font-size="10.00">Domain-Specific Default)</text>
+</g>
+<!-- d_resolve&#45;&gt;auto_resolve -->
+<g id="edge14" class="edge">
+<title>d_resolve-&gt;auto_resolve</title>
+<path fill="none" stroke="black" d="M369.36,-1078C308.52,-1078 72.53,-1078 72.53,-1078 72.53,-1078 72.53,-871.12 72.53,-871.12"/>
+<polygon fill="black" stroke="black" points="72.53,-863.12 76.13,-871.12 72.53,-865.9 72.53,-871.12 72.53,-871.12 72.53,-871.12 72.53,-865.9 68.93,-871.12 72.53,-863.12"/>
+<text xml:space="preserve" text-anchor="middle" x="91.74" y="-1091.5" font-family="Helvetica,sans-Serif" font-size="9.00">[auto resolve</text>
+<text xml:space="preserve" text-anchor="middle" x="91.74" y="-1080.7" font-family="Helvetica,sans-Serif" font-size="9.00">possible]</text>
+</g>
+<!-- llm_analyze -->
+<g id="node17" class="node">
+<title>llm_analyze</title>
+<polygon fill="none" stroke="black" stroke-dasharray="5,2" points="356.85,-977.6 186.22,-977.6 186.22,-933.44 356.85,-933.44 356.85,-977.6"/>
+<text xml:space="preserve" text-anchor="middle" x="271.53" y="-958.52" font-family="Helvetica,sans-Serif" font-size="10.00">LLM Analyzes Conflict Context,</text>
+<text xml:space="preserve" text-anchor="middle" x="271.53" y="-946.52" font-family="Helvetica,sans-Serif" font-size="10.00">Origin Tags &amp; Change History</text>
+</g>
+<!-- d_resolve&#45;&gt;llm_analyze -->
+<g id="edge16" class="edge">
+<title>d_resolve-&gt;llm_analyze</title>
+<path fill="none" stroke="black" d="M369.82,-1065C359.74,-1065 347.79,-1065 347.79,-1065 347.79,-1065 347.79,-987.16 347.79,-987.16"/>
+<polygon fill="black" stroke="black" points="347.79,-979.16 351.39,-987.16 347.79,-981.94 347.79,-987.16 347.79,-987.16 347.79,-987.16 347.79,-981.94 344.19,-987.16 347.79,-979.16"/>
+<text xml:space="preserve" text-anchor="middle" x="319.78" y="-1050.59" font-family="Helvetica,sans-Serif" font-size="9.00">[LLM-assisted</text>
+<text xml:space="preserve" text-anchor="middle" x="319.78" y="-1039.79" font-family="Helvetica,sans-Serif" font-size="9.00">resolution]</text>
+</g>
+<!-- strategy_ui -->
+<g id="node20" class="node">
+<title>strategy_ui</title>
+<polygon fill="none" stroke="black" stroke-dasharray="5,2" points="571.29,-977.6 421.77,-977.6 421.77,-933.44 571.29,-933.44 571.29,-977.6"/>
+<text xml:space="preserve" text-anchor="middle" x="496.53" y="-958.52" font-family="Helvetica,sans-Serif" font-size="10.00">ConflictResolutionStrategy</text>
+<text xml:space="preserve" text-anchor="middle" x="496.53" y="-946.52" font-family="Helvetica,sans-Serif" font-size="10.00">(Pluggable UI)</text>
+</g>
+<!-- d_resolve&#45;&gt;strategy_ui -->
+<g id="edge22" class="edge">
+<title>d_resolve-&gt;strategy_ui</title>
+<path fill="none" stroke="black" d="M403.47,-1072C419.29,-1072 438.75,-1072 438.75,-1072 438.75,-1072 438.75,-987.2 438.75,-987.2"/>
+<polygon fill="black" stroke="black" points="438.75,-979.2 442.35,-987.2 438.75,-981.98 438.75,-987.2 438.75,-987.2 438.75,-987.2 438.75,-981.98 435.15,-987.2 438.75,-979.2"/>
+<text xml:space="preserve" text-anchor="middle" x="414.24" y="-1039.14" font-family="Helvetica,sans-Serif" font-size="9.00">[intervention</text>
+<text xml:space="preserve" text-anchor="middle" x="414.24" y="-1028.34" font-family="Helvetica,sans-Serif" font-size="9.00">required]</text>
+</g>
+<!-- d_llm_conf -->
+<g id="node7" class="node">
+<title>d_llm_conf</title>
+<polygon fill="none" stroke="black" points="307.53,-731 287.73,-711.2 307.53,-691.4 327.33,-711.2 307.53,-731"/>
+</g>
+<!-- llm_user_review -->
+<g id="node19" class="node">
+<title>llm_user_review</title>
+<polygon fill="none" stroke="black" stroke-dasharray="5,2" points="366.45,-617.12 208.61,-617.12 208.61,-572.96 366.45,-572.96 366.45,-617.12"/>
+<text xml:space="preserve" text-anchor="middle" x="287.53" y="-598.04" font-family="Helvetica,sans-Serif" font-size="10.00">User Reviews LLM Proposal</text>
+<text xml:space="preserve" text-anchor="middle" x="287.53" y="-586.04" font-family="Helvetica,sans-Serif" font-size="10.00">&amp; Confirms or Overrides</text>
+</g>
+<!-- d_llm_conf&#45;&gt;llm_user_review -->
+<g id="edge19" class="edge">
+<title>d_llm_conf-&gt;llm_user_review</title>
+<path fill="none" stroke="black" d="M307.53,-690.7C307.53,-690.7 307.53,-626.53 307.53,-626.53"/>
+<polygon fill="black" stroke="black" points="307.53,-618.53 311.13,-626.53 307.53,-621.31 307.53,-626.53 307.53,-626.53 307.53,-626.53 307.53,-621.31 303.93,-626.53 307.53,-618.53"/>
+<text xml:space="preserve" text-anchor="middle" x="274.26" y="-672.12" font-family="Helvetica,sans-Serif" font-size="9.00">[confidence</text>
+<text xml:space="preserve" text-anchor="middle" x="274.26" y="-661.32" font-family="Helvetica,sans-Serif" font-size="9.00">above threshold]</text>
+</g>
+<!-- view_history -->
+<g id="node21" class="node">
+<title>view_history</title>
+<polygon fill="none" stroke="black" points="573.39,-617.12 431.67,-617.12 431.67,-572.96 573.39,-572.96 573.39,-617.12"/>
+<text xml:space="preserve" text-anchor="middle" x="502.53" y="-598.04" font-family="Helvetica,sans-Serif" font-size="10.00">User Views Conflict</text>
+<text xml:space="preserve" text-anchor="middle" x="502.53" y="-586.04" font-family="Helvetica,sans-Serif" font-size="10.00">History &amp; State Previews</text>
+</g>
+<!-- d_llm_conf&#45;&gt;view_history -->
+<g id="edge21" class="edge">
+<title>d_llm_conf-&gt;view_history</title>
+<path fill="none" stroke="black" d="M327.78,-711C372.99,-711 478.21,-711 478.21,-711 478.21,-711 478.21,-626.62 478.21,-626.62"/>
+<polygon fill="black" stroke="black" points="478.21,-618.62 481.81,-626.62 478.21,-621.4 478.21,-626.62 478.21,-626.62 478.21,-626.62 478.21,-621.4 474.61,-626.62 478.21,-618.62"/>
+<text xml:space="preserve" text-anchor="middle" x="412.42" y="-724.5" font-family="Helvetica,sans-Serif" font-size="9.00">[confidence</text>
+<text xml:space="preserve" text-anchor="middle" x="412.42" y="-713.7" font-family="Helvetica,sans-Serif" font-size="9.00">below threshold]</text>
+</g>
+<!-- d_owner -->
+<g id="node8" class="node">
+<title>d_owner</title>
+<polygon fill="none" stroke="black" points="679.53,-500.96 648.93,-472.16 679.53,-443.36 710.13,-472.16 679.53,-500.96"/>
+</g>
+<!-- owner_rationale -->
+<g id="node27" class="node">
+<title>owner_rationale</title>
+<polygon fill="none" stroke="black" points="581.11,-367.28 439.95,-367.28 439.95,-331.28 581.11,-331.28 581.11,-367.28"/>
+<text xml:space="preserve" text-anchor="middle" x="510.53" y="-346.28" font-family="Helvetica,sans-Serif" font-size="10.00">Owner Submits Decision</text>
+</g>
+<!-- d_owner&#45;&gt;owner_rationale -->
+<g id="edge31" class="edge">
+<title>d_owner-&gt;owner_rationale</title>
+<path fill="none" stroke="black" d="M648.57,-472C618.46,-472 577.25,-472 577.25,-472 577.25,-472 577.25,-376.87 577.25,-376.87"/>
+<polygon fill="black" stroke="black" points="577.25,-368.87 580.85,-376.87 577.25,-371.65 577.25,-376.87 577.25,-376.87 577.25,-376.87 577.25,-371.65 573.65,-376.87 577.25,-368.87"/>
+<text xml:space="preserve" text-anchor="middle" x="610.52" y="-473.59" font-family="Helvetica,sans-Serif" font-size="9.00">[owner approves</text>
+<text xml:space="preserve" text-anchor="middle" x="610.52" y="-462.79" font-family="Helvetica,sans-Serif" font-size="9.00">resolution]</text>
+</g>
+<!-- merge_blocked -->
+<g id="node28" class="node">
+<title>merge_blocked</title>
+<polygon fill="none" stroke="black" points="748.3,-255.2 558.77,-255.2 558.77,-211.04 748.3,-211.04 748.3,-255.2"/>
+<text xml:space="preserve" text-anchor="middle" x="653.53" y="-236.12" font-family="Helvetica,sans-Serif" font-size="10.00">MERGE BLOCKED</text>
+<text xml:space="preserve" text-anchor="middle" x="653.53" y="-224.12" font-family="Helvetica,sans-Serif" font-size="10.00">(Owner Escalated or No Response)</text>
+</g>
+<!-- d_owner&#45;&gt;merge_blocked -->
+<g id="edge33" class="edge">
+<title>d_owner-&gt;merge_blocked</title>
+<path fill="none" stroke="black" d="M679.53,-442.85C679.53,-442.85 679.53,-264.77 679.53,-264.77"/>
+<polygon fill="black" stroke="black" points="679.53,-256.77 683.13,-264.77 679.53,-259.55 679.53,-264.77 679.53,-264.77 679.53,-264.77 679.53,-259.55 675.93,-264.77 679.53,-256.77"/>
+<text xml:space="preserve" text-anchor="middle" x="662.77" y="-356.51" font-family="Helvetica,sans-Serif" font-size="9.00">[Denied]</text>
+</g>
+<!-- intercept&#45;&gt;fork1 -->
+<g id="edge2" class="edge">
+<title>intercept-&gt;fork1</title>
+<path fill="none" stroke="black" d="M475.53,-1910.47C475.53,-1910.47 475.53,-1848.37 475.53,-1848.37"/>
+<polygon fill="black" stroke="black" points="475.53,-1840.37 479.13,-1848.37 475.53,-1843.16 475.53,-1848.37 475.53,-1848.37 475.53,-1848.37 475.53,-1843.16 471.93,-1848.37 475.53,-1840.37"/>
+</g>
+<!-- del_analyzer&#45;&gt;join1 -->
+<g id="edge6" class="edge">
+<title>del_analyzer-&gt;join1</title>
+<path fill="none" stroke="black" d="M334.07,-1731C357.87,-1731 378.53,-1731 378.53,-1731 378.53,-1731 378.53,-1653.71 378.53,-1653.71"/>
+<polygon fill="black" stroke="black" points="378.53,-1645.71 382.13,-1653.71 378.53,-1648.5 378.53,-1653.71 378.53,-1653.71 378.53,-1653.71 378.53,-1648.5 374.93,-1653.71 378.53,-1645.71"/>
+</g>
+<!-- upd_analyzer&#45;&gt;join1 -->
+<g id="edge7" class="edge">
+<title>upd_analyzer-&gt;join1</title>
+<path fill="none" stroke="black" d="M475.53,-1715.83C475.53,-1715.83 475.53,-1653.73 475.53,-1653.73"/>
+<polygon fill="black" stroke="black" points="475.53,-1645.73 479.13,-1653.73 475.53,-1648.52 475.53,-1653.73 475.53,-1653.73 475.53,-1653.73 475.53,-1648.52 471.93,-1653.73 475.53,-1645.73"/>
+</g>
+<!-- dom_validator&#45;&gt;join1 -->
+<g id="edge8" class="edge">
+<title>dom_validator-&gt;join1</title>
+<path fill="none" stroke="black" d="M617.34,-1731C602.96,-1731 592.43,-1731 592.43,-1731 592.43,-1731 592.43,-1653.71 592.43,-1653.71"/>
+<polygon fill="black" stroke="black" points="592.43,-1645.71 596.03,-1653.71 592.43,-1648.5 592.43,-1653.71 592.43,-1653.71 592.43,-1653.71 592.43,-1648.5 588.83,-1653.71 592.43,-1645.71"/>
+</g>
+<!-- calc_impact -->
+<g id="node14" class="node">
+<title>calc_impact</title>
+<polygon fill="none" stroke="black" points="551.11,-1437.68 399.95,-1437.68 399.95,-1393.52 551.11,-1393.52 551.11,-1437.68"/>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1418.6" font-family="Helvetica,sans-Serif" font-size="10.00">Calculate Impact</text>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1406.6" font-family="Helvetica,sans-Serif" font-size="10.00">(Compute ConflictSeverity)</text>
+</g>
+<!-- categorize&#45;&gt;calc_impact -->
+<g id="edge10" class="edge">
+<title>categorize-&gt;calc_impact</title>
+<path fill="none" stroke="black" d="M475.53,-1509.43C475.53,-1509.43 475.53,-1447.3 475.53,-1447.3"/>
+<polygon fill="black" stroke="black" points="475.53,-1439.3 479.13,-1447.3 475.53,-1442.08 475.53,-1447.3 475.53,-1447.3 475.53,-1447.3 475.53,-1442.08 471.93,-1447.3 475.53,-1439.3"/>
+</g>
+<!-- role_mgr -->
+<g id="node15" class="node">
+<title>role_mgr</title>
+<polygon fill="none" stroke="black" points="569.75,-1321.52 381.32,-1321.52 381.32,-1277.36 569.75,-1277.36 569.75,-1321.52"/>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1302.44" font-family="Helvetica,sans-Serif" font-size="10.00">RoleManager Identity Verification &amp;</text>
+<text xml:space="preserve" text-anchor="middle" x="475.53" y="-1290.44" font-family="Helvetica,sans-Serif" font-size="10.00">Assign Roles to Conflict</text>
+</g>
+<!-- calc_impact&#45;&gt;role_mgr -->
+<g id="edge11" class="edge">
+<title>calc_impact-&gt;role_mgr</title>
+<path fill="none" stroke="black" d="M475.53,-1393.2C475.53,-1393.2 475.53,-1330.99 475.53,-1330.99"/>
+<polygon fill="black" stroke="black" points="475.53,-1322.99 479.13,-1330.99 475.53,-1325.77 475.53,-1330.99 475.53,-1330.99 475.53,-1330.99 475.53,-1325.77 471.93,-1330.99 475.53,-1322.99"/>
+</g>
+<!-- role_mgr&#45;&gt;d_clearance -->
+<g id="edge12" class="edge">
+<title>role_mgr-&gt;d_clearance</title>
+<path fill="none" stroke="black" d="M475.53,-1276.94C475.53,-1276.94 475.53,-1214.94 475.53,-1214.94"/>
+<polygon fill="black" stroke="black" points="475.53,-1206.94 479.13,-1214.94 475.53,-1209.72 475.53,-1214.94 475.53,-1214.94 475.53,-1214.94 475.53,-1209.72 471.93,-1214.94 475.53,-1206.94"/>
+</g>
+<!-- audit -->
+<g id="node29" class="node">
+<title>audit</title>
+<polygon fill="none" stroke="black" points="468.3,-255.2 248.77,-255.2 248.77,-211.04 468.3,-211.04 468.3,-255.2"/>
+<text xml:space="preserve" text-anchor="middle" x="358.53" y="-236.12" font-family="Helvetica,sans-Serif" font-size="10.00">AuditLogger Synchronous Disk Write</text>
+<text xml:space="preserve" text-anchor="middle" x="358.53" y="-224.12" font-family="Helvetica,sans-Serif" font-size="10.00">(Logs Decision, Annotations, Risk Metrics)</text>
+</g>
+<!-- auto_resolve&#45;&gt;audit -->
+<g id="edge15" class="edge">
+<title>auto_resolve-&gt;audit</title>
+<path fill="none" stroke="black" d="M72.53,-804.81C72.53,-685.5 72.53,-233 72.53,-233 72.53,-233 239.15,-233 239.15,-233"/>
+<polygon fill="black" stroke="black" points="247.15,-233 239.15,-236.6 244.37,-233 239.15,-233 239.15,-233 239.15,-233 244.37,-233 239.15,-229.4 247.15,-233"/>
+</g>
+<!-- llm_propose -->
+<g id="node18" class="node">
+<title>llm_propose</title>
+<polygon fill="none" stroke="black" stroke-dasharray="5,2" points="404.81,-855.44 210.25,-855.44 210.25,-811.28 404.81,-811.28 404.81,-855.44"/>
+<text xml:space="preserve" text-anchor="middle" x="307.53" y="-836.36" font-family="Helvetica,sans-Serif" font-size="10.00">LLM Proposes Candidate Resolution</text>
+<text xml:space="preserve" text-anchor="middle" x="307.53" y="-824.36" font-family="Helvetica,sans-Serif" font-size="10.00">with Confidence Score</text>
+</g>
+<!-- llm_analyze&#45;&gt;llm_propose -->
+<g id="edge17" class="edge">
+<title>llm_analyze-&gt;llm_propose</title>
+<path fill="none" stroke="black" d="M283.55,-933.11C283.55,-933.11 283.55,-864.84 283.55,-864.84"/>
+<polygon fill="black" stroke="black" points="283.55,-856.84 287.15,-864.84 283.55,-859.62 283.55,-864.84 283.55,-864.84 283.55,-864.84 283.55,-859.62 279.95,-864.84 283.55,-856.84"/>
+</g>
+<!-- llm_propose&#45;&gt;d_llm_conf -->
+<g id="edge18" class="edge">
+<title>llm_propose-&gt;d_llm_conf</title>
+<path fill="none" stroke="black" d="M307.53,-810.95C307.53,-810.95 307.53,-740.65 307.53,-740.65"/>
+<polygon fill="black" stroke="black" points="307.53,-732.65 311.13,-740.65 307.53,-735.44 307.53,-740.65 307.53,-740.65 307.53,-740.65 307.53,-735.44 303.93,-740.65 307.53,-732.65"/>
+</g>
+<!-- add_annot -->
+<g id="node23" class="node">
+<title>add_annot</title>
+<polygon fill="none" stroke="black" points="375.34,-371.36 239.72,-371.36 239.72,-327.2 375.34,-327.2 375.34,-371.36"/>
+<text xml:space="preserve" text-anchor="middle" x="307.53" y="-352.28" font-family="Helvetica,sans-Serif" font-size="10.00">User Adds</text>
+<text xml:space="preserve" text-anchor="middle" x="307.53" y="-340.28" font-family="Helvetica,sans-Serif" font-size="10.00">Annotations/Comments</text>
+</g>
+<!-- llm_user_review&#45;&gt;add_annot -->
+<g id="edge20" class="edge">
+<title>llm_user_review-&gt;add_annot</title>
+<path fill="none" stroke="black" d="M303.09,-572.8C303.09,-572.8 303.09,-380.87 303.09,-380.87"/>
+<polygon fill="black" stroke="black" points="303.09,-372.87 306.69,-380.87 303.09,-375.65 303.09,-380.87 303.09,-380.87 303.09,-380.87 303.09,-375.65 299.49,-380.87 303.09,-372.87"/>
+</g>
+<!-- strategy_ui&#45;&gt;view_history -->
+<g id="edge23" class="edge">
+<title>strategy_ui-&gt;view_history</title>
+<path fill="none" stroke="black" d="M524.75,-932.97C524.75,-932.97 524.75,-626.8 524.75,-626.8"/>
+<polygon fill="black" stroke="black" points="524.75,-618.8 528.35,-626.8 524.75,-621.58 524.75,-626.8 524.75,-626.8 524.75,-626.8 524.75,-621.58 521.15,-626.8 524.75,-618.8"/>
+</g>
+<!-- select_res -->
+<g id="node22" class="node">
+<title>select_res</title>
+<polygon fill="none" stroke="black" points="568.62,-494.24 412.44,-494.24 412.44,-450.08 568.62,-450.08 568.62,-494.24"/>
+<text xml:space="preserve" text-anchor="middle" x="490.53" y="-475.16" font-family="Helvetica,sans-Serif" font-size="10.00">User Selects Resolution</text>
+<text xml:space="preserve" text-anchor="middle" x="490.53" y="-463.16" font-family="Helvetica,sans-Serif" font-size="10.00">(Manual or Default Choices)</text>
+</g>
+<!-- view_history&#45;&gt;select_res -->
+<g id="edge24" class="edge">
+<title>view_history-&gt;select_res</title>
+<path fill="none" stroke="black" d="M500.15,-572.5C500.15,-572.5 500.15,-503.77 500.15,-503.77"/>
+<polygon fill="black" stroke="black" points="500.15,-495.77 503.75,-503.77 500.15,-498.56 500.15,-503.77 500.15,-503.77 500.15,-503.77 500.15,-498.56 496.55,-503.77 500.15,-495.77"/>
+</g>
+<!-- select_res&#45;&gt;add_annot -->
+<g id="edge25" class="edge">
+<title>select_res-&gt;add_annot</title>
+<path fill="none" stroke="black" d="M412.07,-472C389.52,-472 370.9,-472 370.9,-472 370.9,-472 370.9,-381.01 370.9,-381.01"/>
+<polygon fill="black" stroke="black" points="370.9,-373.01 374.5,-381.01 370.9,-375.79 370.9,-381.01 370.9,-381.01 370.9,-381.01 370.9,-375.79 367.3,-381.01 370.9,-373.01"/>
+</g>
+<!-- add_annot&#45;&gt;audit -->
+<g id="edge26" class="edge">
+<title>add_annot-&gt;audit</title>
+<path fill="none" stroke="black" d="M312.06,-326.88C312.06,-326.88 312.06,-264.67 312.06,-264.67"/>
+<polygon fill="black" stroke="black" points="312.06,-256.67 315.66,-264.67 312.06,-259.45 312.06,-264.67 312.06,-264.67 312.06,-264.67 312.06,-259.45 308.46,-264.67 312.06,-256.67"/>
+</g>
+<!-- notify_owner -->
+<g id="node25" class="node">
+<title>notify_owner</title>
+<polygon fill="none" stroke="black" points="809.23,-977.6 635.83,-977.6 635.83,-933.44 809.23,-933.44 809.23,-977.6"/>
+<text xml:space="preserve" text-anchor="middle" x="722.53" y="-958.52" font-family="Helvetica,sans-Serif" font-size="10.00">Notify Owner: Conflict Details,</text>
+<text xml:space="preserve" text-anchor="middle" x="722.53" y="-946.52" font-family="Helvetica,sans-Serif" font-size="10.00">Affected Elements &amp; Risk Score</text>
+</g>
+<!-- identify_owner&#45;&gt;notify_owner -->
+<g id="edge28" class="edge">
+<title>identify_owner-&gt;notify_owner</title>
+<path fill="none" stroke="black" d="M689.79,-1049.28C689.79,-1049.28 689.79,-987.07 689.79,-987.07"/>
+<polygon fill="black" stroke="black" points="689.79,-979.07 693.39,-987.07 689.79,-981.85 689.79,-987.07 689.79,-987.07 689.79,-987.07 689.79,-981.85 686.19,-987.07 689.79,-979.07"/>
+</g>
+<!-- owner_review -->
+<g id="node26" class="node">
+<title>owner_review</title>
+<polygon fill="none" stroke="black" points="787.29,-733.28 607.77,-733.28 607.77,-689.12 787.29,-689.12 787.29,-733.28"/>
+<text xml:space="preserve" text-anchor="middle" x="697.53" y="-714.2" font-family="Helvetica,sans-Serif" font-size="10.00">Owner Reviews Conflict History,</text>
+<text xml:space="preserve" text-anchor="middle" x="697.53" y="-702.2" font-family="Helvetica,sans-Serif" font-size="10.00">State Previews &amp; Severity Report</text>
+</g>
+<!-- notify_owner&#45;&gt;owner_review -->
+<g id="edge29" class="edge">
+<title>notify_owner-&gt;owner_review</title>
+<path fill="none" stroke="black" d="M711.56,-932.97C711.56,-932.97 711.56,-742.91 711.56,-742.91"/>
+<polygon fill="black" stroke="black" points="711.56,-734.91 715.16,-742.91 711.56,-737.69 711.56,-742.91 711.56,-742.91 711.56,-742.91 711.56,-737.69 707.96,-742.91 711.56,-734.91"/>
+</g>
+<!-- owner_review&#45;&gt;d_owner -->
+<g id="edge30" class="edge">
+<title>owner_review-&gt;d_owner</title>
+<path fill="none" stroke="black" d="M679.53,-688.71C679.53,-688.71 679.53,-510.62 679.53,-510.62"/>
+<polygon fill="black" stroke="black" points="679.53,-502.62 683.13,-510.62 679.53,-505.4 679.53,-510.62 679.53,-510.62 679.53,-510.62 679.53,-505.4 675.93,-510.62 679.53,-502.62"/>
+</g>
+<!-- owner_rationale&#45;&gt;audit -->
+<g id="edge32" class="edge">
+<title>owner_rationale-&gt;audit</title>
+<path fill="none" stroke="black" d="M454.12,-330.87C454.12,-330.87 454.12,-264.63 454.12,-264.63"/>
+<polygon fill="black" stroke="black" points="454.12,-256.63 457.72,-264.63 454.12,-259.41 454.12,-264.63 454.12,-264.63 454.12,-264.63 454.12,-259.41 450.52,-264.63 454.12,-256.63"/>
+</g>
+<!-- merge_blocked&#45;&gt;end -->
+<g id="edge34" class="edge">
+<title>merge_blocked-&gt;end</title>
+<path fill="none" stroke="black" d="M558.4,-233C527.3,-233 500.58,-233 500.58,-233 500.58,-233 500.58,-39.01 500.58,-39.01"/>
+<polygon fill="black" stroke="black" points="500.58,-31.01 504.18,-39.01 500.58,-33.79 500.58,-39.01 500.58,-39.01 500.58,-39.01 500.58,-33.79 496.98,-39.01 500.58,-31.01"/>
+</g>
+<!-- jgit -->
+<g id="node30" class="node">
+<title>jgit</title>
+<polygon fill="none" stroke="black" points="483.62,-139.04 327.44,-139.04 327.44,-103.04 483.62,-103.04 483.62,-139.04"/>
+<text xml:space="preserve" text-anchor="middle" x="405.53" y="-118.04" font-family="Helvetica,sans-Serif" font-size="10.00">JGit Transaction Application</text>
+</g>
+<!-- audit&#45;&gt;jgit -->
+<g id="edge35" class="edge">
+<title>audit-&gt;jgit</title>
+<path fill="none" stroke="black" d="M397.87,-210.71C397.87,-210.71 397.87,-148.56 397.87,-148.56"/>
+<polygon fill="black" stroke="black" points="397.87,-140.56 401.47,-148.56 397.87,-143.34 397.87,-148.56 397.87,-148.56 397.87,-148.56 397.87,-143.34 394.27,-148.56 397.87,-140.56"/>
+</g>
+<!-- jgit&#45;&gt;end -->
+<g id="edge36" class="edge">
+<title>jgit-&gt;end</title>
+<path fill="none" stroke="black" d="M484.11,-121C489.06,-121 492.1,-121 492.1,-121 492.1,-121 492.1,-40.3 492.1,-40.3"/>
+<polygon fill="black" stroke="black" points="492.1,-32.3 495.7,-40.3 492.1,-35.08 492.1,-40.3 492.1,-40.3 492.1,-40.3 492.1,-35.08 488.5,-40.3 492.1,-32.3"/>
+</g>
+</g>
+</svg>

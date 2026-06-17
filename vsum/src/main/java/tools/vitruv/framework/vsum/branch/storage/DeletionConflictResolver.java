@@ -63,11 +63,17 @@ public class DeletionConflictResolver {
         private final DeletionConflict conflict;
         private final DeletionPolicy chosenPolicy;
         private final String reason;
+        private final String rationale;
 
         public Resolution(DeletionConflict conflict, DeletionPolicy chosenPolicy, String reason) {
+            this(conflict, chosenPolicy, reason, null);
+        }
+
+        public Resolution(DeletionConflict conflict, DeletionPolicy chosenPolicy, String reason, String rationale) {
             this.conflict = conflict;
             this.chosenPolicy = chosenPolicy;
             this.reason = reason;
+            this.rationale = rationale;
         }
 
         public DeletionConflict getConflict() {
@@ -82,9 +88,19 @@ public class DeletionConflictResolver {
             return reason;
         }
 
+        /**
+         * Returns the optional free-text annotation entered by the human resolver,
+         * or {@code null} when the decision was made headlessly or the user
+         * pressed Enter without typing anything.
+         */
+        public String getRationale() {
+            return rationale;
+        }
+
         @Override
         public String toString() {
-            return "Resolution{policy=" + chosenPolicy + ", reason='" + reason + "'}";
+            return "Resolution{policy=" + chosenPolicy + ", reason='" + reason + "'"
+                    + (rationale != null ? ", rationale='" + rationale + "'" : "") + '}';
         }
     }
 
@@ -104,22 +120,26 @@ public class DeletionConflictResolver {
         boolean interactive = console != null;
 
         if (!interactive) {
+            DeletionPolicy fallback = mergePolicy.getDefaultDeletionPolicy();
             LOGGER.warn("No interactive console detected (CI/CD or headless mode). "
-                    + "Falling back to RESTRICT_DELETIONS for all {} conflict(s).", conflicts.size());
-            return resolveHeadless(conflicts);
+                    + "Falling back to policy-default '{}' for all {} conflict(s).",
+                    fallback, conflicts.size());
+            return resolveHeadless(conflicts, fallback);
         }
 
         return resolveInteractive(conflicts, console);
     }
 
     /**
-     * Headless resolution: block all deletions to prevent silent data loss.
+     * Headless resolution: apply the merge policy's configured default policy
+     * to every conflict so that CI / non-interactive environments behave
+     * deterministically according to project configuration.
      */
-    private List<Resolution> resolveHeadless(List<DeletionConflict> conflicts) {
+    private List<Resolution> resolveHeadless(List<DeletionConflict> conflicts, DeletionPolicy fallback) {
         List<Resolution> resolutions = new ArrayList<>();
+        String reason = "Non-interactive environment: applied policy default '" + fallback + "'";
         for (DeletionConflict conflict : conflicts) {
-            resolutions.add(new Resolution(conflict, DeletionPolicy.RESTRICT_DELETIONS,
-                    "Non-interactive environment: deletion blocked to prevent silent data loss"));
+            resolutions.add(new Resolution(conflict, fallback, reason));
         }
         return resolutions;
     }
@@ -163,6 +183,19 @@ public class DeletionConflictResolver {
         console.printf("========================================%n%n");
 
         return resolutions;
+    }
+
+    /**
+     * Prompts the user for an optional free-text rationale/annotation.
+     * Returns the trimmed input, or {@code null} if the user pressed Enter
+     * without typing anything (or if EOF was reached).
+     */
+    private String promptRationale(Console console) {
+        String raw = console.readLine("  Optional rationale (press Enter to skip): ");
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return raw.trim();
     }
 
     /**
@@ -231,7 +264,8 @@ public class DeletionConflictResolver {
                 case "R":
                     if (conflict.isAncestorAvailable()) {
                         return new Resolution(conflict, DeletionPolicy.RECOVER_FROM_ANCESTOR,
-                                "User chose to recover from shared ancestor");
+                                "User chose to recover from shared ancestor",
+                                promptRationale(console));
                     }
                     console.printf("  Recovery is not available (no shared ancestor). Please choose another option.%n");
                     break;
@@ -244,14 +278,16 @@ public class DeletionConflictResolver {
                     if ("YES".equals(confirm != null ? confirm.trim() : "")) {
                         return new Resolution(conflict, DeletionPolicy.TOMBSTONE_WITH_WARNING,
                                 "User confirmed deletion, " + conflict.getLostUpdateCount()
-                                        + " update(s) will be lost");
+                                        + " update(s) will be lost",
+                                promptRationale(console));
                     }
                     console.printf("  Deletion not confirmed. Please choose again.%n");
                     break;
 
                 case "S":
                     return new Resolution(conflict, DeletionPolicy.RESTRICT_DELETIONS,
-                            "User chose to skip — deletion blocked, manual resolution required");
+                            "User chose to skip — deletion blocked, manual resolution required",
+                            promptRationale(console));
 
                 default:
                     console.printf("  Invalid choice '%s'. Please enter R, D, or S.%n", input);

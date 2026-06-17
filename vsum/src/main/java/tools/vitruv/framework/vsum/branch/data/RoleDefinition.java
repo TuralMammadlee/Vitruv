@@ -97,10 +97,12 @@ public class RoleDefinition {
 
     /**
      * Returns {@code true} if this role can approve a deletion that would
-     * destroy the given number of updates.
+     * destroy the given number of updates. The check is inclusive: a role
+     * with {@code maxLostUpdates == 3} can approve a deletion that destroys
+     * exactly 3 updates.
      */
     public boolean canApproveUpdatesLost(int lostUpdateCount) {
-        return hasUnlimitedDeletionApproval() || lostUpdateCount < maxLostUpdates;
+        return hasUnlimitedDeletionApproval() || lostUpdateCount <= maxLostUpdates;
     }
 
     /**

@@ -36,11 +36,11 @@ class MergePolicyTest {
     }
 
     @Test
-    @DisplayName("Developer blocked even for MEDIUM severity if update count meets limit")
-    void developerBlockedAtUpdateLimit() {
+    @DisplayName("Developer blocked when update count exceeds limit")
+    void developerBlockedAboveUpdateLimit() {
         MergePolicy policy = MergePolicy.forRole(RoleDefinition.developer());
-        // Developer max is 3, canApproveUpdatesLost checks < 3, so 3 is blocked
-        DeletionConflict conflict = conflictWithUpdates(3); // HIGH severity
+        // Developer maxLostUpdates is 3 (inclusive). 4 updates exceeds the cap.
+        DeletionConflict conflict = conflictWithUpdates(4); // HIGH severity (>= highThreshold)
 
         assertFalse(policy.canApproveDeletion(conflict));
     }
@@ -79,8 +79,10 @@ class MergePolicyTest {
 
         // 4 updates (HIGH severity) + under limit → allowed
         assertTrue(policy.canApproveDeletion(conflictWithUpdates(4)));
-        // 5 updates (HIGH severity) + at limit → blocked by update count
-        assertFalse(policy.canApproveDeletion(conflictWithUpdates(5)));
+        // 5 updates (HIGH severity) + at inclusive cap → allowed
+        assertTrue(policy.canApproveDeletion(conflictWithUpdates(5)));
+        // 6 updates (HIGH severity) + over cap → blocked by update count
+        assertFalse(policy.canApproveDeletion(conflictWithUpdates(6)));
     }
 
     @Test

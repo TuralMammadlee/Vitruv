@@ -252,9 +252,13 @@ public class CommitManager {
      */
     private void writeSemanticChangelog(Git git, String commitSha, String branch, String authorName, LocalDateTime authorDate, RevCommit revCommit) {
         try {
-            java.util.Map<String, java.util.List<EChange<EObject>>> changesByResource = changeBuffer.drainChanges();
+            // Drain the annotated buffer so the per-change ChangeOrigin tag survives
+            // into the persisted changelog. The non-annotated path discards origin
+            // information and breaks downstream auto-resolution of update conflicts.
+            java.util.Map<String, java.util.List<SemanticChangeBuffer.AnnotatedEChange>> annotatedByResource =
+                    changeBuffer.drainAnnotatedChanges();
 
-            if (changesByResource.isEmpty()) {
+            if (annotatedByResource.isEmpty()) {
                 LOGGER.debug("No semantic changes to write for commit {}", commitSha.substring(0, 7));
                 return;
             }
@@ -268,10 +272,10 @@ public class CommitManager {
             // Resolve active resources for XMI snapshot writing
             Collection<Resource> activeResources = resourceSupplier != null ? resourceSupplier.get() : java.util.Collections.emptyList();
 
-            java.util.List<java.nio.file.Path> writtenFiles = changelogManager.write(
+            java.util.List<java.nio.file.Path> writtenFiles = changelogManager.writeAnnotated(
                     commitSha, branch, authorName, authorDate,
                     revCommit.getFullMessage().trim(),
-                    parentShas, changesByResource, activeResources, uuidResolver);
+                    parentShas, annotatedByResource, activeResources, uuidResolver);
 
             // Stage all written changelog files (JSON + XMI) so they are tracked by Git
             for (java.nio.file.Path file : writtenFiles) {
