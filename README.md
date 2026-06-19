@@ -65,6 +65,18 @@ Those tiers classify **which side should win**, not mutate model files themselve
 
 Regression coverage lives in `**DeletionConflictTest**` and `**UpdateConflictResolverTest**`, with existing `**UpdateConflictAnalyzerTest**` and `**MergeManagerTest**` covering surrounding merge and analyzer behavior.
 
+### Conflict owner detection and owner-priority clearance
+
+When a merge is conflicting, `MergeManager` runs `ConflictOwnerResolver` to detect the original author(s) of the conflicting changes. Ownership is derived purely from **JGit blame** against both merge participants (the source and target revisions), using the conflicting line ranges as hints with a whole-file fallback. Author identities are normalized to lowercased, trimmed Git emails. No `authorEmail` persistence feature is used for these decisions; ownership is computed on demand from blame only.
+
+The aggregated owner set is attached to every detected `DeletionConflict` and `UpdateConflict` (`detectedOwners` plus an `ownerDetectionAvailable` flag), and `MergeManager.getLastDetectedConflictOwners()` exposes the owners of the most recent conflicting merge.
+
+The permission model is **owner-priority with role fallback**, applied in `MergePolicy.canApproveDeletion`:
+
+- if the current user is a detected owner of the conflict, they may resolve it directly;
+- if they are not a detected owner, the existing role/severity/update-count checks apply;
+- if owner information is unavailable, the system falls back fully to the existing role-based behavior.
+
 ### Activity diagram artifact
 
 The workflow is also available in the activity diagram as SVG.

@@ -2,7 +2,9 @@ package tools.vitruv.framework.vsum.branch.data;
 
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangeEntry;
 
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Describes an update-vs-update conflict detected during a branch merge.
@@ -31,6 +33,8 @@ public class UpdateConflict {
     private final SemanticChangeEntry targetEntry;
     private final OriginPermutation originPermutation;
     private final FundamentalConflictType fundamentalType;
+    private final Set<String> detectedOwners;
+    private final boolean ownerDetectionAvailable;
 
     /**
      * Creates an update conflict. {@link OriginPermutation} and
@@ -48,6 +52,17 @@ public class UpdateConflict {
     public UpdateConflict(String elementUuid, String eClass, String featureName,
                           String sourceBranch, String targetBranch,
                           SemanticChangeEntry sourceEntry, SemanticChangeEntry targetEntry) {
+        this(elementUuid, eClass, featureName, sourceBranch, targetBranch,
+                sourceEntry, targetEntry, Set.of(), false);
+    }
+
+    /**
+     * Creates an update conflict with optional owner attribution metadata.
+     */
+    public UpdateConflict(String elementUuid, String eClass, String featureName,
+                          String sourceBranch, String targetBranch,
+                          SemanticChangeEntry sourceEntry, SemanticChangeEntry targetEntry,
+                          Set<String> detectedOwners, boolean ownerDetectionAvailable) {
         this.elementUuid = Objects.requireNonNull(elementUuid);
         this.eClass = eClass;
         this.featureName = Objects.requireNonNull(featureName);
@@ -58,6 +73,8 @@ public class UpdateConflict {
         this.originPermutation = OriginPermutation.of(sourceEntry.getOrigin(), targetEntry.getOrigin());
         this.fundamentalType = FundamentalConflictType.combine(
                 sourceEntry.getChangeType(), targetEntry.getChangeType());
+        this.detectedOwners = normalizeOwners(detectedOwners);
+        this.ownerDetectionAvailable = ownerDetectionAvailable;
     }
 
     public String getElementUuid() { return elementUuid; }
@@ -67,6 +84,8 @@ public class UpdateConflict {
     public String getTargetBranch() { return targetBranch; }
     public SemanticChangeEntry getSourceEntry() { return sourceEntry; }
     public SemanticChangeEntry getTargetEntry() { return targetEntry; }
+    public Set<String> getDetectedOwners() { return detectedOwners; }
+    public boolean isOwnerDetectionAvailable() { return ownerDetectionAvailable; }
 
     /**
      * Returns the {@link OriginPermutation} of this conflict. Drives the
@@ -145,6 +164,31 @@ public class UpdateConflict {
         return preferred == sourceEntry ? sourceBranch : targetBranch;
     }
 
+    /**
+     * Returns a copy of this conflict with ownership metadata attached.
+     */
+    public UpdateConflict withOwnership(Set<String> owners, boolean detectionAvailable) {
+        return new UpdateConflict(elementUuid, eClass, featureName, sourceBranch, targetBranch,
+                sourceEntry, targetEntry, owners, detectionAvailable);
+    }
+
+    private Set<String> normalizeOwners(Set<String> owners) {
+        if (owners == null || owners.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String owner : owners) {
+            if (owner == null) {
+                continue;
+            }
+            String value = owner.trim().toLowerCase();
+            if (!value.isBlank()) {
+                normalized.add(value);
+            }
+        }
+        return Set.copyOf(normalized);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -168,6 +212,7 @@ public class UpdateConflict {
                 ", feature='" + featureName + '\'' +
                 ", source='" + sourceBranch + "' [" + sourceEntry.getOrigin() + "]" +
                 ", target='" + targetBranch + "' [" + targetEntry.getOrigin() + "]" +
+                ", detectedOwners=" + detectedOwners +
                 ", severity=" + getSeverity() +
                 '}';
     }

@@ -11,6 +11,7 @@ import tools.vitruv.framework.vsum.branch.exception.BranchOperationException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static tools.vitruv.framework.vsum.branch.GitTestHelper.*;
@@ -172,6 +173,38 @@ class MergeManagerTest {
 
                 assertEquals(BranchState.ACTIVE, branchManager.getBranchState("feature"),
                         "source branch must remain ACTIVE when merge has conflicts");
+            }
+        }
+
+        @Test
+        @DisplayName("detects conflict owners from source and target branches")
+        void detectsConflictOwners(@TempDir Path repoDir) throws Exception {
+            try (var git = initRepo(repoDir)) {
+                commitFile(git, repoDir, "system.model", "<System v='1'/>", "Base");
+
+                git.branchCreate().setName("feature").call();
+                git.checkout().setName("feature").call();
+                Files.writeString(repoDir.resolve("system.model"), "<System v='feature'/>");
+                git.add().addFilepattern("system.model").call();
+                git.commit()
+                        .setMessage("Feature change")
+                        .setAuthor("Feature Dev", "feature@example.com")
+                        .call();
+
+                git.checkout().setName("master").call();
+                Files.writeString(repoDir.resolve("system.model"), "<System v='master'/>");
+                git.add().addFilepattern("system.model").call();
+                git.commit()
+                        .setMessage("Master change")
+                        .setAuthor("Main Dev", "main@example.com")
+                        .call();
+
+                MergeManager manager = new MergeManager(repoDir);
+                ModelMergeResult result = manager.merge("feature");
+
+                assertEquals(ModelMergeResult.MergeStatus.CONFLICTING, result.getStatus());
+                assertEquals(Set.of("feature@example.com", "main@example.com"),
+                        manager.getLastDetectedConflictOwners());
             }
         }
     }

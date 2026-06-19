@@ -7,6 +7,7 @@ import tools.vitruv.framework.vsum.branch.storage.SemanticChangeEntry;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangeType;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -53,6 +54,52 @@ class MergePolicyTest {
 
         assertTrue(policy.canApproveDeletion(conflict));
         assertFalse(policy.requiresEscalation(conflict));
+    }
+
+    @Test
+    @DisplayName("Detected owner can approve even when role limits would block")
+    void detectedOwnerCanApproveBeyondRoleLimits() {
+        MergePolicy policy = new MergePolicy(
+                DeletionPolicy.RECOVER_FROM_ANCESTOR,
+                RoleDefinition.developer(),
+                "owner@example.com",
+                SeverityThresholds.defaults());
+
+        // 10 CONSEQUENTIAL updates → CRITICAL severity, normally blocked for a developer.
+        DeletionConflict conflict = conflictWithUpdates(10)
+                .withOwnership(Set.of("owner@example.com"), true);
+
+        assertTrue(policy.canApproveDeletion(conflict));
+    }
+
+    @Test
+    @DisplayName("Non-owner falls back to role clearance")
+    void nonOwnerFallsBackToRoleClearance() {
+        MergePolicy policy = new MergePolicy(
+                DeletionPolicy.RECOVER_FROM_ANCESTOR,
+                RoleDefinition.developer(),
+                "other@example.com",
+                SeverityThresholds.defaults());
+
+        DeletionConflict conflict = conflictWithUpdates(5)
+                .withOwnership(Set.of("owner@example.com"), true);
+
+        assertFalse(policy.canApproveDeletion(conflict));
+    }
+
+    @Test
+    @DisplayName("Missing owner detection keeps legacy role behavior")
+    void missingOwnerDetectionUsesRoleBehavior() {
+        MergePolicy policy = new MergePolicy(
+                DeletionPolicy.RECOVER_FROM_ANCESTOR,
+                RoleDefinition.developer(),
+                "dev@example.com",
+                SeverityThresholds.defaults());
+
+        DeletionConflict conflict = conflictWithUpdates(2)
+                .withOwnership(Set.of(), true);
+
+        assertTrue(policy.canApproveDeletion(conflict));
     }
 
     @Test

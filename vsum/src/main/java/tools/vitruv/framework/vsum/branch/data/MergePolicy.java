@@ -3,6 +3,7 @@ package tools.vitruv.framework.vsum.branch.data;
 import tools.vitruv.framework.vsum.branch.storage.RoleManager;
 
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Configurable merge policy that governs how deletion conflicts are resolved
@@ -40,6 +41,7 @@ public class MergePolicy {
 
     private final DeletionPolicy defaultDeletionPolicy;
     private final RoleDefinition role;
+    private final String currentUserId;
     private final SeverityThresholds severityThresholds;
 
     /**
@@ -51,9 +53,26 @@ public class MergePolicy {
      * @param severityThresholds    custom thresholds for severity limits.
      */
     public MergePolicy(DeletionPolicy defaultDeletionPolicy, RoleDefinition role, SeverityThresholds severityThresholds) {
+        this(defaultDeletionPolicy, role, null, severityThresholds);
+    }
+
+    /**
+     * Creates a merge policy with explicit current user identity.
+     *
+     * @param defaultDeletionPolicy the fallback policy when no interactive
+     *                              choice is made or in headless mode.
+     * @param role                  the role definition governing permissions.
+     * @param currentUserId         the identity (normalized email) of the user
+     *                              approving the merge, used for owner-priority
+     *                              checks. May be {@code null}.
+     * @param severityThresholds    custom thresholds for severity limits.
+     */
+    public MergePolicy(DeletionPolicy defaultDeletionPolicy, RoleDefinition role,
+                       String currentUserId, SeverityThresholds severityThresholds) {
         this.defaultDeletionPolicy = Objects.requireNonNull(defaultDeletionPolicy,
                 "defaultDeletionPolicy must not be null");
         this.role = Objects.requireNonNull(role, "role must not be null");
+        this.currentUserId = normalizeUserId(currentUserId);
         this.severityThresholds = severityThresholds != null ? severityThresholds : SeverityThresholds.defaults();
     }
 
@@ -61,7 +80,7 @@ public class MergePolicy {
      * Creates a merge policy with default severity thresholds.
      */
     public MergePolicy(DeletionPolicy defaultDeletionPolicy, RoleDefinition role) {
-        this(defaultDeletionPolicy, role, SeverityThresholds.defaults());
+        this(defaultDeletionPolicy, role, null, SeverityThresholds.defaults());
     }
 
     /**
@@ -74,10 +93,14 @@ public class MergePolicy {
 
     /**
      * Convenience factory: creates a policy for the current Git user
-     * by resolving their role from the {@link RoleManager}.
+     * by resolving their role and identity from the {@link RoleManager}.
      */
     public static MergePolicy forCurrentUser(RoleManager roleManager) {
-        return forRole(roleManager.getCurrentUserRole());
+        return new MergePolicy(
+                DeletionPolicy.RECOVER_FROM_ANCESTOR,
+                roleManager.getCurrentUserRole(),
+                roleManager.getCurrentUserId(),
+                SeverityThresholds.defaults());
     }
 
     /**
@@ -94,6 +117,9 @@ public class MergePolicy {
      */
     public boolean canApproveDeletion(DeletionConflict conflict) {
         Objects.requireNonNull(conflict, "conflict must not be null");
+        if (isCurrentUserDetectedOwner(conflict.getDetectedOwners())) {
+            return true;
+        }
         boolean updatesOk = role.canApproveUpdatesLost(conflict.getLostUpdateCount());
         boolean severityOk = role.canResolveSeverity(conflict.getSeverity(severityThresholds));
         return updatesOk && severityOk;
@@ -110,12 +136,36 @@ public class MergePolicy {
 
     public DeletionPolicy getDefaultDeletionPolicy() { return defaultDeletionPolicy; }
     public RoleDefinition getRole() { return role; }
+    public String getCurrentUserId() { return currentUserId; }
     public SeverityThresholds getSeverityThresholds() { return severityThresholds; }
 
     /**
      * Returns the role name for display in the CLI resolver.
      */
     public String getRoleName() { return role.getName(); }
+
+    /**
+     * Returns whether the current user is one of the detected owners of a conflict.
+     * Returns {@code false} when no current user identity is known or no owners
+     * were detected.
+     */
+    public boolean isCurrentUserDetectedOwner(Set<String> detectedOwners) {
+        if (currentUserId == null || detectedOwners == null || detectedOwners.isEmpty()) {
+            return false;
+        }
+        return detectedOwners.stream()
+                .filter(Objects::nonNull)
+                .map(this::normalizeUserId)
+                .anyMatch(currentUserId::equals);
+    }
+
+    private String normalizeUserId(String userId) {
+        if (userId == null) {
+            return null;
+        }
+        String normalized = userId.trim().toLowerCase();
+        return normalized.isBlank() ? null : normalized;
+    }
 
     @Override
     public String toString() {

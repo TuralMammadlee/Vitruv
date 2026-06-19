@@ -24,6 +24,7 @@ import tools.vitruv.framework.vsum.branch.data.ValidationResult;
 import tools.vitruv.framework.vsum.branch.exception.BranchOperationException;
 import tools.vitruv.framework.vsum.branch.data.AuditLogEntry;
 import tools.vitruv.framework.vsum.branch.storage.AuditLogger;
+import tools.vitruv.framework.vsum.branch.storage.ConflictOwnerResolver;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictAnalyzer;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictResolver;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangelogManager;
@@ -36,9 +37,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -66,12 +69,20 @@ public class MergeManager {
     private final SemanticChangelogManager changelogManager;
     private final DeletionConflictAnalyzer deletionConflictAnalyzer;
     private final UpdateConflictAnalyzer updateConflictAnalyzer;
+    private final ConflictOwnerResolver conflictOwnerResolver;
 
     /** Deletion conflicts detected during the most recent merge (empty if none). */
     private List<DeletionConflict> lastDeletionConflicts = List.of();
 
     /** Update-vs-update conflicts detected during the most recent merge (empty if none). */
     private List<UpdateConflict> lastUpdateConflicts = List.of();
+
+    /**
+     * Aggregated set of conflict owners (normalized author emails) detected via
+     * blame during the most recent conflicting merge. Empty when no conflicts
+     * were detected or owner detection was unavailable.
+     */
+    private Set<String> lastDetectedConflictOwners = Set.of();
 
     /** Source branch of the most recent conflicting merge (null if no conflict has been detected). */
     private String lastSourceBranch = null;
@@ -125,6 +136,7 @@ public class MergeManager {
         this.changelogManager = new SemanticChangelogManager(repoRoot);
         this.deletionConflictAnalyzer = new DeletionConflictAnalyzer();
         this.updateConflictAnalyzer = new UpdateConflictAnalyzer();
+        this.conflictOwnerResolver = new ConflictOwnerResolver();
         loadSeverityThresholds();
     }
 
@@ -174,6 +186,7 @@ public class MergeManager {
     public ModelMergeResult merge(String sourceBranch, boolean deleteAfterMerge) throws BranchOperationException {
         checkNotNull(sourceBranch, "source branch must not be null");
         checkArgument(!sourceBranch.isBlank(), "source branch must not be blank");
+        this.lastDetectedConflictOwners = Set.of();
         try (Git git = Git.open(repoRoot.toFile())) {
             Repository repo = git.getRepository();
             // Resolve current (target) branch
@@ -282,11 +295,20 @@ public class MergeManager {
                 List<String> conflictingFiles = new ArrayList<>(conflicts.keySet());
                 LOGGER.warn("Merge resulted in {} conflict(s): {}", conflictingFiles.size(), conflictingFiles);
 
+                // Detect conflict owners via blame against both merge participants. Owner
+                // detection is "available" whenever conflicting files exist, even if blame
+                // ultimately resolves no author for them.
+                boolean ownerDetectionAvailable = !conflictingFiles.isEmpty();
+                Ref resolvedSourceRef = repo.findRef("refs/heads/" + sourceBranch);
+                ObjectId sourceCommit = resolvedSourceRef != null ? resolvedSourceRef.getObjectId() : null;
+                ObjectId targetCommit = repo.resolve("HEAD");
+                this.lastDetectedConflictOwners =
+                        detectConflictOwners(repo, sourceCommit, targetCommit, conflicts);
+
                 // Analyze changelogs for semantic conflicts
                 try {
-                    Ref resolvedSourceRef = repo.findRef("refs/heads/" + sourceBranch);
-                    String shortShaSource = resolvedSourceRef.getObjectId().abbreviate(7).name();
-                    String shortShaTarget = repo.resolve("HEAD").abbreviate(7).name();
+                    String shortShaSource = sourceCommit != null ? sourceCommit.abbreviate(7).name() : "unknown";
+                    String shortShaTarget = targetCommit != null ? targetCommit.abbreviate(7).name() : "unknown";
                     var sourceChangelog = changelogManager.read(sourceBranch, shortShaSource);
                     var targetChangelog = changelogManager.read(targetBranch, shortShaTarget);
 
@@ -315,6 +337,15 @@ public class MergeManager {
                     this.lastDeletionConflicts = List.of();
                     this.lastUpdateConflicts = List.of();
                 }
+
+                // Attach the aggregated owner set to every detected conflict so that
+                // downstream permission checks (MergePolicy) can apply owner-priority.
+                this.lastDeletionConflicts = this.lastDeletionConflicts.stream()
+                        .map(c -> c.withOwnership(lastDetectedConflictOwners, ownerDetectionAvailable))
+                        .toList();
+                this.lastUpdateConflicts = this.lastUpdateConflicts.stream()
+                        .map(c -> c.withOwnership(lastDetectedConflictOwners, ownerDetectionAvailable))
+                        .toList();
 
                 return ModelMergeResult.conflicting(sourceBranch, targetBranch, conflictingFiles);
             }
@@ -402,6 +433,39 @@ public class MergeManager {
     }
 
     /**
+     * Returns the aggregated set of conflict owners (normalized author emails)
+     * detected via blame during the most recent conflicting merge. Empty if no
+     * conflicts were detected or owner detection was unavailable.
+     */
+    public Set<String> getLastDetectedConflictOwners() {
+        return lastDetectedConflictOwners;
+    }
+
+    /**
+     * Runs blame-based owner detection for the conflicting files and aggregates
+     * the per-file owner sets into a single set. Non-fatal: any failure yields
+     * an empty set so owner detection never blocks a merge.
+     */
+    private Set<String> detectConflictOwners(Repository repo, ObjectId sourceCommit,
+                                             ObjectId targetCommit, Map<String, int[][]> conflicts) {
+        try {
+            Map<String, Set<String>> ownersByFile = conflictOwnerResolver.resolveConflictOwners(
+                    repo, sourceCommit, targetCommit, conflicts);
+            Set<String> owners = new LinkedHashSet<>();
+            for (Set<String> fileOwners : ownersByFile.values()) {
+                owners.addAll(fileOwners);
+            }
+            if (!owners.isEmpty()) {
+                LOGGER.info("Detected {} conflict owner(s): {}", owners.size(), owners);
+            }
+            return Set.copyOf(owners);
+        } catch (RuntimeException e) {
+            LOGGER.debug("Conflict owner detection skipped: {}", e.getMessage());
+            return Set.of();
+        }
+    }
+
+    /**
      * Returns the project-wide severity thresholds loaded from
      * {@code .vitruvius/config/severity-thresholds.json}, or
      * {@link SeverityThresholds#defaults()} when no config file exists.
@@ -444,6 +508,7 @@ public class MergeManager {
         return new MergePolicy(
                 callerPolicy.getDefaultDeletionPolicy(),
                 callerPolicy.getRole(),
+                callerPolicy.getCurrentUserId(),
                 severityThresholds);
     }
 

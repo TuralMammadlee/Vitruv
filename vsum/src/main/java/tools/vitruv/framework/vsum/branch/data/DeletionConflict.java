@@ -3,8 +3,10 @@ package tools.vitruv.framework.vsum.branch.data;
 import tools.vitruv.framework.vsum.branch.storage.ChangeOrigin;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangeEntry;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Describes a delete-vs-update conflict detected during a branch merge.
@@ -48,6 +50,8 @@ public class DeletionConflict {
     private final List<SemanticChangeEntry> affectedUpdates;
     private final boolean ancestorAvailable;
     private final ChangeOrigin deletionOrigin;
+    private final Set<String> detectedOwners;
+    private final boolean ownerDetectionAvailable;
 
     /**
      * Creates a new deletion conflict descriptor.
@@ -65,6 +69,18 @@ public class DeletionConflict {
                             String deletingBranch, String updatingBranch,
                             List<SemanticChangeEntry> affectedUpdates,
                             boolean ancestorAvailable, ChangeOrigin deletionOrigin) {
+        this(deletedElementUuid, deletedElementEClass, deletingBranch, updatingBranch,
+                affectedUpdates, ancestorAvailable, deletionOrigin, Set.of(), false);
+    }
+
+    /**
+     * Creates a new deletion conflict descriptor with optional owner attribution metadata.
+     */
+    public DeletionConflict(String deletedElementUuid, String deletedElementEClass,
+                            String deletingBranch, String updatingBranch,
+                            List<SemanticChangeEntry> affectedUpdates,
+                            boolean ancestorAvailable, ChangeOrigin deletionOrigin,
+                            Set<String> detectedOwners, boolean ownerDetectionAvailable) {
         this.deletedElementUuid = Objects.requireNonNull(deletedElementUuid);
         this.deletedElementEClass = deletedElementEClass;
         this.deletingBranch = Objects.requireNonNull(deletingBranch);
@@ -72,6 +88,8 @@ public class DeletionConflict {
         this.affectedUpdates = Objects.requireNonNull(affectedUpdates);
         this.ancestorAvailable = ancestorAvailable;
         this.deletionOrigin = deletionOrigin != null ? deletionOrigin : ChangeOrigin.UNKNOWN;
+        this.detectedOwners = normalizeOwners(detectedOwners);
+        this.ownerDetectionAvailable = ownerDetectionAvailable;
     }
 
     public String getDeletedElementUuid() { return deletedElementUuid; }
@@ -81,6 +99,8 @@ public class DeletionConflict {
     public List<SemanticChangeEntry> getAffectedUpdates() { return affectedUpdates; }
     public boolean isAncestorAvailable() { return ancestorAvailable; }
     public ChangeOrigin getDeletionOrigin() { return deletionOrigin; }
+    public Set<String> getDetectedOwners() { return detectedOwners; }
+    public boolean isOwnerDetectionAvailable() { return ownerDetectionAvailable; }
 
     /**
      * Returns the number of updates that would be destroyed if this deletion
@@ -163,6 +183,32 @@ public class DeletionConflict {
         return ConflictSeverity.fromLostUpdateCount(getWeightedImpact(), thresholds);
     }
 
+    /**
+     * Returns a copy of this conflict with ownership metadata attached.
+     */
+    public DeletionConflict withOwnership(Set<String> owners, boolean detectionAvailable) {
+        return new DeletionConflict(
+                deletedElementUuid, deletedElementEClass, deletingBranch, updatingBranch,
+                affectedUpdates, ancestorAvailable, deletionOrigin, owners, detectionAvailable);
+    }
+
+    private Set<String> normalizeOwners(Set<String> owners) {
+        if (owners == null || owners.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String owner : owners) {
+            if (owner == null) {
+                continue;
+            }
+            String value = owner.trim().toLowerCase();
+            if (!value.isBlank()) {
+                normalized.add(value);
+            }
+        }
+        return Set.copyOf(normalized);
+    }
+
     @Override
     public String toString() {
         return "DeletionConflict{" +
@@ -174,6 +220,7 @@ public class DeletionConflict {
                 ", severity=" + getSeverity() +
                 ", ancestorAvailable=" + ancestorAvailable +
                 ", deletionOrigin=" + deletionOrigin +
+                ", detectedOwners=" + detectedOwners +
                 '}';
     }
 }

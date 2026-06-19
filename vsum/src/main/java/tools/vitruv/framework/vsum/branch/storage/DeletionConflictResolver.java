@@ -10,6 +10,7 @@ import java.io.Console;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Resolves delete-vs-update conflicts using an interactive CLI or falls back
@@ -159,6 +160,7 @@ public class DeletionConflictResolver {
         for (DeletionConflict conflict : conflicts) {
             console.printf("--- Conflict %d of %d ---%n", index, conflicts.size());
             printConflictWarning(conflict, console);
+            printOwnerAssignmentContext(conflict, console);
 
             // Check user-role guardrails
             if (!mergePolicy.canApproveDeletion(conflict)) {
@@ -196,6 +198,36 @@ public class DeletionConflictResolver {
             return null;
         }
         return raw.trim();
+    }
+
+    /**
+     * Prints whether the current decision will follow the owner-priority path or
+     * fall back to role-based clearance, based on blame-derived ownership metadata.
+     */
+    private void printOwnerAssignmentContext(DeletionConflict conflict, Console console) {
+        if (!conflict.isOwnerDetectionAvailable()) {
+            console.printf("  Owner detection unavailable. Applying role-based clearance.%n%n");
+            LOGGER.info("Owner detection unavailable; applying role-based clearance");
+            return;
+        }
+
+        Set<String> owners = conflict.getDetectedOwners();
+        if (owners.isEmpty()) {
+            console.printf("  No owner detected for this conflict. Applying role-based clearance.%n%n");
+            LOGGER.info("No owner detected; applying role-based clearance");
+            return;
+        }
+
+        console.printf("  Detected owner(s): %s%n", String.join(", ", owners));
+        if (mergePolicy.isCurrentUserDetectedOwner(owners)) {
+            console.printf("  You are a detected owner. Owner-priority resolution rights apply.%n%n");
+            LOGGER.info("Owner-priority resolution applies for detected owner(s): {}", owners);
+        } else {
+            console.printf("  You are not a detected owner. Role-based clearance (%s) will be used.%n%n",
+                    mergePolicy.getRoleName());
+            LOGGER.info("Current user is not a detected owner; applying role-based clearance ({})",
+                    mergePolicy.getRoleName());
+        }
     }
 
     /**
