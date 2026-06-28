@@ -77,13 +77,33 @@ The permission model is **owner-priority with role fallback**, applied in `Merge
 - if they are not a detected owner, the existing role/severity/update-count checks apply;
 - if owner information is unavailable, the system falls back fully to the existing role-based behavior.
 
+### Owner escalation (clearance denied path)
+
+When `MergePolicy.requiresEscalation()` is true for a deletion conflict (the current user's role cannot clear it), `MergeManager.resolveDeletionConflicts()` runs the clearance-denied escalation path instead of prompting the resolver immediately:
+
+1. **Notify owner** — `OwnerNotifier` writes `.vitruvius/notifications/<source>-into-<target>-<elementUuid>.json` containing conflict details, affected elements, and the risk score (weighted impact, lost-update count, severity).
+2. **Owner review** — `ConflictReviewService` builds and persists `.vitruvius/reviews/<source>-into-<target>-<elementUuid>.json` with conflict history (changelog entries from both branches), change-level state previews (`from`/`to` per affected update), and a severity report including the role-clearance gap.
+3. **Owner decision** — the detected owner records approve/deny via `MergeManager.submitOwnerDecision(elementUuid, approve, rationale)`, persisted under `.vitruvius/owner-decisions/`.
+4. **Outcome** — if the owner **approved**, the conflict resolves using the merge policy default (typically recover from ancestor) with the owner's rationale captured; if **denied** or **no decision** exists yet, the merge stays **BLOCKED** (`RESTRICT_DELETIONS`).
+
+All escalation steps are also recorded in the merge session audit log (`.vitruvius/audit/`) via `AuditLogEntry` types `OWNER_NOTIFICATION`, `OWNER_REVIEW`, `OWNER_DECISION`, and `MERGE_BLOCKED`.
+
 ### Activity diagram artifact
 
 The workflow is also available in the activity diagram as SVG.
 
 ## Dependency setup
 
-This branch pins the Vitruv Change reactor version inside the root `pom.xml` to a snapshot you built locally (the filename already documents the usual placeholder name for that fork build). If that snapshot is absent from your local Maven repository, build and install the matching Vitruv Change branch first. Without it, Maven dependency resolution fails even though this checkout may be fine. Prefer upstream only builds by restoring the Vitruv Change version entry in the root `pom.xml` to whatever the upstream project publishes as its snapshot.
+This branch pins the Vitruv Change reactor version inside the root `pom.xml` to a snapshot you built locally (`3.2.4-mybranch-SNAPSHOT`). That snapshot must include `tools.vitruv.change.changederivation.persistence.DeltaPersistence` (used by `SemanticChangelogManager` for XMI delta snapshots). If it is absent from your local Maven repository (`~/.m2/repository/tools/vitruv/`), build and install the matching Vitruv Change branch first:
+
+```bash
+cd /path/to/Vitruv-Change
+./mvnw clean install -DskipTests
+```
+
+Without that snapshot, compilation fails on `SemanticChangelogManager` even when the rest of the checkout is fine.
+
+**Build with JDK 21.** Newer JDKs (24/25) break Lombok annotation processing in this project.
 
 ## Build and test
 

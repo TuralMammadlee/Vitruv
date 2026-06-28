@@ -14,10 +14,13 @@ import org.eclipse.jgit.revwalk.filter.RevFilter;
 import tools.vitruv.framework.vsum.branch.data.AutoResolutionOutcome;
 import tools.vitruv.framework.vsum.branch.data.BranchMetadata;
 import tools.vitruv.framework.vsum.branch.data.BranchState;
+import tools.vitruv.framework.vsum.branch.data.ConflictReview;
 import tools.vitruv.framework.vsum.branch.data.DeletionConflict;
 import tools.vitruv.framework.vsum.branch.data.DeletionPolicy;
 import tools.vitruv.framework.vsum.branch.data.MergePolicy;
 import tools.vitruv.framework.vsum.branch.data.ModelMergeResult;
+import tools.vitruv.framework.vsum.branch.data.OwnerDecision;
+import tools.vitruv.framework.vsum.branch.data.OwnerNotification;
 import tools.vitruv.framework.vsum.branch.data.SeverityThresholds;
 import tools.vitruv.framework.vsum.branch.data.UpdateConflict;
 import tools.vitruv.framework.vsum.branch.data.ValidationResult;
@@ -25,8 +28,12 @@ import tools.vitruv.framework.vsum.branch.exception.BranchOperationException;
 import tools.vitruv.framework.vsum.branch.data.AuditLogEntry;
 import tools.vitruv.framework.vsum.branch.storage.AuditLogger;
 import tools.vitruv.framework.vsum.branch.storage.ConflictOwnerResolver;
+import tools.vitruv.framework.vsum.branch.storage.ConflictReviewService;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictAnalyzer;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictResolver;
+import tools.vitruv.framework.vsum.branch.storage.OwnerDecisionStore;
+import tools.vitruv.framework.vsum.branch.storage.OwnerNotifier;
+import tools.vitruv.framework.vsum.branch.storage.RoleManager;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangelogManager;
 import tools.vitruv.framework.vsum.branch.storage.UpdateConflictAnalyzer;
 import tools.vitruv.framework.vsum.branch.storage.UpdateConflictResolver;
@@ -41,6 +48,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -70,6 +78,9 @@ public class MergeManager {
     private final DeletionConflictAnalyzer deletionConflictAnalyzer;
     private final UpdateConflictAnalyzer updateConflictAnalyzer;
     private final ConflictOwnerResolver conflictOwnerResolver;
+    private final OwnerNotifier ownerNotifier;
+    private final ConflictReviewService conflictReviewService;
+    private final OwnerDecisionStore ownerDecisionStore;
 
     /** Deletion conflicts detected during the most recent merge (empty if none). */
     private List<DeletionConflict> lastDeletionConflicts = List.of();
@@ -89,6 +100,12 @@ public class MergeManager {
 
     /** Target branch of the most recent conflicting merge (null if no conflict has been detected). */
     private String lastTargetBranch = null;
+
+    /** Short SHA of the source branch head changelog from the most recent conflicting merge. */
+    private String lastSourceShortSha = null;
+
+    /** Short SHA of the target branch head changelog from the most recent conflicting merge. */
+    private String lastTargetShortSha = null;
 
     /**
      * Audit logger scoped to the current merge session. A single instance — and
@@ -137,6 +154,9 @@ public class MergeManager {
         this.deletionConflictAnalyzer = new DeletionConflictAnalyzer();
         this.updateConflictAnalyzer = new UpdateConflictAnalyzer();
         this.conflictOwnerResolver = new ConflictOwnerResolver();
+        this.ownerNotifier = new OwnerNotifier(repoRoot);
+        this.conflictReviewService = new ConflictReviewService(repoRoot, changelogManager);
+        this.ownerDecisionStore = new OwnerDecisionStore(repoRoot);
         loadSeverityThresholds();
     }
 
@@ -187,6 +207,8 @@ public class MergeManager {
         checkNotNull(sourceBranch, "source branch must not be null");
         checkArgument(!sourceBranch.isBlank(), "source branch must not be blank");
         this.lastDetectedConflictOwners = Set.of();
+        this.lastSourceShortSha = null;
+        this.lastTargetShortSha = null;
         try (Git git = Git.open(repoRoot.toFile())) {
             Repository repo = git.getRepository();
             // Resolve current (target) branch
@@ -309,6 +331,8 @@ public class MergeManager {
                 try {
                     String shortShaSource = sourceCommit != null ? sourceCommit.abbreviate(7).name() : "unknown";
                     String shortShaTarget = targetCommit != null ? targetCommit.abbreviate(7).name() : "unknown";
+                    this.lastSourceShortSha = shortShaSource;
+                    this.lastTargetShortSha = shortShaTarget;
                     var sourceChangelog = changelogManager.read(sourceBranch, shortShaSource);
                     var targetChangelog = changelogManager.read(targetBranch, shortShaTarget);
 
@@ -441,6 +465,16 @@ public class MergeManager {
         return lastDetectedConflictOwners;
     }
 
+    /** Returns the short SHA of the source branch head from the most recent conflicting merge. */
+    public String getLastSourceShortSha() {
+        return lastSourceShortSha;
+    }
+
+    /** Returns the short SHA of the target branch head from the most recent conflicting merge. */
+    public String getLastTargetShortSha() {
+        return lastTargetShortSha;
+    }
+
     /**
      * Runs blame-based owner detection for the conflicting files and aggregates
      * the per-file owner sets into a single set. Non-fatal: any failure yields
@@ -562,19 +596,28 @@ public class MergeManager {
         if (lastDeletionConflicts.isEmpty()) {
             return List.of();
         }
-        // Project-wide severity thresholds (loaded from .vitruvius/config/severity-thresholds.json)
-        // take precedence over caller-supplied thresholds. See effectivePolicyFor() for rationale.
         MergePolicy effectivePolicy = effectivePolicyFor(mergePolicy);
-        DeletionConflictResolver resolver = new DeletionConflictResolver(effectivePolicy);
-        List<DeletionConflictResolver.Resolution> resolutions = resolver.resolve(lastDeletionConflicts);
+
+        List<DeletionConflict> directResolve = new ArrayList<>();
+        List<DeletionConflictResolver.Resolution> resolutions = new ArrayList<>();
+
+        for (DeletionConflict conflict : lastDeletionConflicts) {
+            if (effectivePolicy.requiresEscalation(conflict)) {
+                resolutions.addAll(handleEscalatedConflict(conflict, effectivePolicy));
+            } else {
+                directResolve.add(conflict);
+            }
+        }
+
+        if (!directResolve.isEmpty()) {
+            DeletionConflictResolver resolver = new DeletionConflictResolver(effectivePolicy);
+            resolutions.addAll(resolver.resolve(directResolve));
+        }
 
         // Persist all decisions to the audit log BEFORE any JGit operation modifies the working tree.
-        // This guarantees the human's rationale is durably on disk even if recovery fails mid-way.
         auditDeletionResolutions(resolutions);
 
-        // Collect the conflicts that asked for ancestor recovery. A single checkout
-        // restores the whole .vitruvius/vsum directory, so running it inside the loop
-        // (as the earlier version did) wastes work and re-overwrites the tree N times.
+        // Collect the conflicts that asked for ancestor recovery.
         List<DeletionConflict> toRecover = resolutions.stream()
                 .filter(r -> r.getChosenPolicy() == DeletionPolicy.RECOVER_FROM_ANCESTOR)
                 .map(DeletionConflictResolver.Resolution::getConflict)
@@ -592,6 +635,111 @@ public class MergeManager {
             }
         }
         return resolutions;
+    }
+
+    /**
+     * Runs the clearance-denied escalation path for one conflict: notify owner,
+     * build and persist the review package, then check for a recorded owner
+     * decision. Returns a single-element list with either an owner-approved
+     * resolution or a MERGE BLOCKED outcome.
+     */
+    private List<DeletionConflictResolver.Resolution> handleEscalatedConflict(
+            DeletionConflict conflict, MergePolicy effectivePolicy) {
+        try {
+            OwnerNotification notification = OwnerNotification.forConflict(
+                    conflict, severityThresholds, lastSourceBranch, lastTargetBranch);
+            ownerNotifier.notify(notification);
+            logAudit(AuditLogEntry.forOwnerNotification(notification, lastSourceBranch, lastTargetBranch));
+
+            ConflictReview review = conflictReviewService.buildReview(
+                    conflict, severityThresholds, effectivePolicy.getRole(),
+                    lastSourceBranch, lastTargetBranch,
+                    lastSourceShortSha, lastTargetShortSha);
+            conflictReviewService.persistReview(review, lastSourceBranch, lastTargetBranch);
+            logAudit(AuditLogEntry.forOwnerReview(review, lastSourceBranch, lastTargetBranch));
+
+            Optional<OwnerDecision> decision = ownerDecisionStore.load(
+                    conflict.getDeletedElementUuid(), lastSourceBranch, lastTargetBranch);
+
+            if (decision.isPresent() && decision.get().isApproved()) {
+                OwnerDecision ownerDecision = decision.get();
+                LOGGER.info("Owner {} approved resolution for element {}",
+                        ownerDecision.getOwnerId(), conflict.getDeletedElementUuid());
+                logAudit(AuditLogEntry.forOwnerDecision(ownerDecision));
+                return List.of(new DeletionConflictResolver.Resolution(
+                        conflict,
+                        effectivePolicy.getDefaultDeletionPolicy(),
+                        "Owner approved: " + ownerDecision.getOwnerId(),
+                        ownerDecision.getRationale()));
+            }
+
+            String blockReason = decision
+                    .filter(d -> !d.isApproved())
+                    .map(d -> "Owner denied: " + (d.getRationale() != null ? d.getRationale() : "no rationale"))
+                    .orElse("No owner decision recorded — merge blocked until owner responds");
+            LOGGER.warn("MERGE BLOCKED for element {}: {}", conflict.getDeletedElementUuid(), blockReason);
+            logAudit(AuditLogEntry.forMergeBlocked(
+                    conflict.getDeletedElementUuid(), blockReason, lastSourceBranch, lastTargetBranch));
+            return List.of(new DeletionConflictResolver.Resolution(
+                    conflict, DeletionPolicy.RESTRICT_DELETIONS, blockReason));
+
+        } catch (IOException e) {
+            LOGGER.warn("Escalation failed for element {}, treating as blocked: {}",
+                    conflict.getDeletedElementUuid(), e.getMessage());
+            String reason = "Escalation failed: " + e.getMessage();
+            logAudit(AuditLogEntry.forMergeBlocked(
+                    conflict.getDeletedElementUuid(), reason, lastSourceBranch, lastTargetBranch));
+            return List.of(new DeletionConflictResolver.Resolution(
+                    conflict, DeletionPolicy.RESTRICT_DELETIONS, reason));
+        }
+    }
+
+    /**
+     * Records an owner's approve/deny decision on an escalated deletion conflict.
+     * The caller must be one of the detected owners (validated via Git user email).
+     *
+     * @param elementUuid UUID of the conflicting deleted element.
+     * @param approve     {@code true} to approve the resolution, {@code false} to deny.
+     * @param rationale   optional free-text explanation from the owner.
+     * @throws BranchOperationException if the element is not part of the current
+     *                                  merge session or the caller is not a detected owner.
+     */
+    public void submitOwnerDecision(String elementUuid, boolean approve, String rationale)
+            throws BranchOperationException {
+        Objects.requireNonNull(elementUuid, "elementUuid must not be null");
+
+        DeletionConflict conflict = lastDeletionConflicts.stream()
+                .filter(c -> elementUuid.equals(c.getDeletedElementUuid()))
+                .findFirst()
+                .orElseThrow(() -> new BranchOperationException(
+                        "No deletion conflict with element UUID " + elementUuid + " in current merge session"));
+
+        try {
+            RoleManager roleManager = new RoleManager(repoRoot);
+            String currentUserId = roleManager.getCurrentUserId();
+            if (!effectivePolicyFor(MergePolicy.forCurrentUser(roleManager))
+                    .isCurrentUserDetectedOwner(conflict.getDetectedOwners())) {
+                throw new BranchOperationException(
+                        "Current user " + currentUserId + " is not a detected owner of this conflict");
+            }
+
+            OwnerDecision decision = OwnerDecision.of(
+                    elementUuid, currentUserId, approve, rationale,
+                    lastSourceBranch, lastTargetBranch);
+            ownerDecisionStore.save(decision);
+            logAudit(AuditLogEntry.forOwnerDecision(decision));
+            flushSessionAuditLog();
+            LOGGER.info("Owner decision recorded: {} for element {}", decision.getDecision(), elementUuid);
+        } catch (IOException e) {
+            throw new BranchOperationException("Failed to save owner decision: " + e.getMessage(), e);
+        }
+    }
+
+    /** Appends an audit entry when a session logger is active; no-op otherwise. */
+    private void logAudit(AuditLogEntry entry) {
+        if (sessionAuditLogger != null) {
+            sessionAuditLogger.log(entry);
+        }
     }
 
     /**
