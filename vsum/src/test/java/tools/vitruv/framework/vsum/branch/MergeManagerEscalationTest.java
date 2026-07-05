@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import tools.vitruv.framework.vsum.branch.data.DeletionPolicy;
-import tools.vitruv.framework.vsum.branch.data.DeletionPolicy;
 import tools.vitruv.framework.vsum.branch.data.MergePolicy;
+import tools.vitruv.framework.vsum.branch.data.OwnerEscalation;
 import tools.vitruv.framework.vsum.branch.data.RoleDefinition;
 import tools.vitruv.framework.vsum.branch.storage.AuditLogger;
 import tools.vitruv.framework.vsum.branch.storage.ChangeOrigin;
@@ -88,7 +88,7 @@ class MergeManagerEscalationTest {
         }
 
         @Test
-        @DisplayName("owner DENY decision keeps merge blocked")
+        @DisplayName("owner DENY decision keeps merge blocked and escalates to METHODOLOGIST")
         void ownerDenyKeepsBlocked(@TempDir Path repoDir) throws Exception {
             try (Git git = initRepo(repoDir)) {
                 git.getRepository().getConfig()
@@ -106,7 +106,89 @@ class MergeManagerEscalationTest {
 
                 assertEquals(1, resolutions.size());
                 assertEquals(DeletionPolicy.RESTRICT_DELETIONS, resolutions.get(0).getChosenPolicy());
-                assertTrue(resolutions.get(0).getReason().contains("Owner denied"));
+                assertTrue(resolutions.get(0).getReason().toLowerCase().contains("escalated to methodologist"));
+
+                OwnerEscalationStore escalationStore = new OwnerEscalationStore(repoDir);
+                assertTrue(escalationStore.load("deleted-uuid", "feature", "main").get().isEscalatedToSenior());
+            }
+        }
+
+        @Test
+        @DisplayName("owner APPROVE with chosen policy applies owner-selected resolution")
+        void ownerApproveWithChosenPolicy(@TempDir Path repoDir) throws Exception {
+            try (Git git = initRepo(repoDir)) {
+                git.getRepository().getConfig()
+                        .setString("user", null, "email", "owner@example.com");
+                git.getRepository().getConfig().save();
+
+                MergeManager manager = new MergeManager(repoDir);
+                injectEscalationState(manager, highImpactConflict(), "feature", "main", "abc1234", "def5678");
+
+                manager.submitOwnerDecision("deleted-uuid", true, "Accept loss",
+                        DeletionPolicy.TOMBSTONE_WITH_WARNING);
+
+                MergePolicy developerPolicy = new MergePolicy(
+                        DeletionPolicy.RESTRICT_DELETIONS, RoleDefinition.developer());
+                List<DeletionConflictResolver.Resolution> resolutions =
+                        manager.resolveDeletionConflicts(developerPolicy, "feature");
+
+                assertEquals(1, resolutions.size());
+                assertEquals(DeletionPolicy.TOMBSTONE_WITH_WARNING, resolutions.get(0).getChosenPolicy());
+                assertTrue(resolutions.get(0).getReason().contains("Owner approved"));
+            }
+        }
+
+        @Test
+        @DisplayName("senior METHODOLOGIST resolves after owner-escalated conflict")
+        void seniorResolvesAfterOwnerEscalation(@TempDir Path repoDir) throws Exception {
+            try (Git git = initRepo(repoDir)) {
+                git.getRepository().getConfig()
+                        .setString("user", null, "email", "methodologist@example.com");
+                git.getRepository().getConfig().save();
+
+                MergeManager manager = new MergeManager(repoDir);
+                injectEscalationState(manager, highImpactConflict(), "feature", "main", "abc1234", "def5678");
+
+                new OwnerEscalationStore(repoDir).save(OwnerEscalation.escalatedToSenior(
+                        "deleted-uuid", "feature", "main", "Owner denied",
+                        List.of("methodologist@example.com")));
+
+                MergePolicy methodologistPolicy = MergePolicy.forRole(RoleDefinition.methodologist());
+                List<DeletionConflictResolver.Resolution> resolutions =
+                        manager.resolveDeletionConflicts(methodologistPolicy, "feature");
+
+                assertEquals(1, resolutions.size());
+                assertNotEquals("BLOCKED", resolutions.get(0).getReason());
+            }
+        }
+
+        @Test
+        @DisplayName("no owner response in headless mode escalates to METHODOLOGIST when timeout is zero")
+        void noResponseEscalatesToSenior(@TempDir Path repoDir) throws Exception {
+            String previous = System.getProperty("vitruv.owner.response.timeout.hours");
+            System.setProperty("vitruv.owner.response.timeout.hours", "0");
+            try (Git git = initRepo(repoDir)) {
+                git.getRepository().getConfig()
+                        .setString("user", null, "email", "developer@example.com");
+                git.getRepository().getConfig().save();
+
+                MergeManager manager = new MergeManager(repoDir);
+                injectEscalationState(manager, highImpactConflict(), "feature", "main",
+                        "abc1234", "def5678");
+
+                MergePolicy developerPolicy = MergePolicy.forRole(RoleDefinition.developer());
+                List<DeletionConflictResolver.Resolution> resolutions =
+                        manager.resolveDeletionConflicts(developerPolicy, "feature");
+
+                assertEquals(1, resolutions.size());
+                assertTrue(resolutions.get(0).getReason().toLowerCase()
+                        .contains("escalated to methodologist"));
+            } finally {
+                if (previous == null) {
+                    System.clearProperty("vitruv.owner.response.timeout.hours");
+                } else {
+                    System.setProperty("vitruv.owner.response.timeout.hours", previous);
+                }
             }
         }
 

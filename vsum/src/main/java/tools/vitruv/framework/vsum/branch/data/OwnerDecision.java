@@ -26,9 +26,11 @@ public final class OwnerDecision {
     private final String rationale;
     private final String sourceBranch;
     private final String targetBranch;
+    private final DeletionPolicy chosenPolicy;
 
     private OwnerDecision(String timestamp, String elementUuid, String ownerId,
-                          String decision, String rationale, String sourceBranch, String targetBranch) {
+                          String decision, String rationale, String sourceBranch,
+                          String targetBranch, DeletionPolicy chosenPolicy) {
         this.timestamp = timestamp;
         this.elementUuid = elementUuid;
         this.ownerId = ownerId;
@@ -36,6 +38,7 @@ public final class OwnerDecision {
         this.rationale = rationale;
         this.sourceBranch = sourceBranch;
         this.targetBranch = targetBranch;
+        this.chosenPolicy = chosenPolicy;
     }
 
     /**
@@ -50,6 +53,18 @@ public final class OwnerDecision {
      */
     public static OwnerDecision of(String elementUuid, String ownerId, boolean approve,
                                    String rationale, String sourceBranch, String targetBranch) {
+        return of(elementUuid, ownerId, approve, rationale, sourceBranch, targetBranch, null);
+    }
+
+    /**
+     * Creates a new owner decision record with an optional resolution policy on approve.
+     *
+     * @param chosenPolicy the owner's chosen {@link DeletionPolicy} when {@code approve} is
+     *                     {@code true}; ignored on deny.
+     */
+    public static OwnerDecision of(String elementUuid, String ownerId, boolean approve,
+                                   String rationale, String sourceBranch, String targetBranch,
+                                   DeletionPolicy chosenPolicy) {
         return new OwnerDecision(
                 Instant.now().toString(),
                 Objects.requireNonNull(elementUuid, "elementUuid must not be null"),
@@ -57,7 +72,8 @@ public final class OwnerDecision {
                 approve ? APPROVE : DENY,
                 rationale,
                 sourceBranch,
-                targetBranch);
+                targetBranch,
+                approve ? chosenPolicy : null);
     }
 
     public String getTimestamp() { return timestamp; }
@@ -67,6 +83,14 @@ public final class OwnerDecision {
     public String getRationale() { return rationale; }
     public String getSourceBranch() { return sourceBranch; }
     public String getTargetBranch() { return targetBranch; }
+
+    /**
+     * Returns the resolution policy chosen by the owner on approve, or {@code null}
+     * when denied or not specified (legacy decisions).
+     */
+    public DeletionPolicy getChosenPolicy() {
+        return chosenPolicy;
+    }
 
     public boolean isApproved() {
         return APPROVE.equals(decision);

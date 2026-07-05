@@ -131,6 +131,18 @@ public class ConflictReviewService {
         return file;
     }
 
+    /**
+     * Returns whether a review artifact already exists for this conflict.
+     */
+    public boolean reviewExists(ConflictReview review, String sourceBranch, String targetBranch) {
+        Objects.requireNonNull(review, "review must not be null");
+        String filename = sanitize(sourceBranch) + "-into-"
+                + sanitize(targetBranch) + "-"
+                + sanitize(review.getDeletedElementUuid()) + ".json";
+        Path file = repoRoot.resolve(".vitruvius").resolve("reviews").resolve(filename);
+        return Files.exists(file);
+    }
+
     private Set<String> collectRelevantUuids(DeletionConflict conflict) {
         Set<String> uuids = new HashSet<>();
         uuids.add(conflict.getDeletedElementUuid());

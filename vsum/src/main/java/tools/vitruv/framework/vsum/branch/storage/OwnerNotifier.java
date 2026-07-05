@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -42,6 +43,18 @@ public class OwnerNotifier {
     public OwnerNotifier(Path repoRoot) {
         this.repoRoot = checkNotNull(repoRoot, "repoRoot must not be null");
         this.gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+    }
+
+    /**
+     * Returns whether a notification artifact already exists for this conflict.
+     */
+    public boolean notificationExists(OwnerNotification notification) {
+        Objects.requireNonNull(notification, "notification must not be null");
+        String filename = sanitize(notification.getSourceBranch()) + "-into-"
+                + sanitize(notification.getTargetBranch()) + "-"
+                + sanitize(notification.getDeletedElementUuid()) + ".json";
+        Path file = repoRoot.resolve(".vitruvius").resolve("notifications").resolve(filename);
+        return Files.exists(file);
     }
 
     /**
@@ -77,6 +90,28 @@ public class OwnerNotifier {
                 notification.getRiskScore(),
                 notification.getLostUpdateCount());
         return file;
+    }
+
+    /**
+     * Reads the {@code timestamp} field from an existing notification artifact.
+     */
+    public Optional<String> readNotificationTimestamp(OwnerNotification notification) {
+        Objects.requireNonNull(notification, "notification must not be null");
+        String filename = sanitize(notification.getSourceBranch()) + "-into-"
+                + sanitize(notification.getTargetBranch()) + "-"
+                + sanitize(notification.getDeletedElementUuid()) + ".json";
+        Path file = repoRoot.resolve(".vitruvius").resolve("notifications").resolve(filename);
+        if (!Files.exists(file)) {
+            return Optional.empty();
+        }
+        try {
+            OwnerNotification stored = gson.fromJson(Files.readString(file), OwnerNotification.class);
+            return stored != null && stored.getTimestamp() != null
+                    ? Optional.of(stored.getTimestamp()) : Optional.empty();
+        } catch (IOException e) {
+            LOGGER.debug("Could not read notification timestamp: {}", e.getMessage());
+            return Optional.empty();
+        }
     }
 
     private static String sanitize(String value) {

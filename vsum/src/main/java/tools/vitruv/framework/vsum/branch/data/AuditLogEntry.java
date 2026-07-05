@@ -148,6 +148,23 @@ public final class AuditLogEntry {
     }
 
     /**
+     * Creates an audit entry when a conflict is re-routed to a senior role
+     * after owner deny or no response.
+     */
+    public static AuditLogEntry forOwnerEscalation(OwnerEscalation escalation) {
+        Objects.requireNonNull(escalation, "escalation must not be null");
+        return new AuditLogEntry(
+                escalation.getTimestamp(),
+                "OWNER_ESCALATION",
+                escalation.getElementUuid(),
+                escalation.getStatus(),
+                escalation.getReason() + " -> assignees " + escalation.getAssignees(),
+                null,
+                escalation.getSourceBranch(),
+                escalation.getTargetBranch());
+    }
+
+    /**
      * Creates an audit entry when a merge is blocked because no owner approved
      * the escalated conflict (or the owner denied it).
      */
