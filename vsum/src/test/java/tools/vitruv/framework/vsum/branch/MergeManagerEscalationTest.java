@@ -12,6 +12,7 @@ import tools.vitruv.framework.vsum.branch.data.RoleDefinition;
 import tools.vitruv.framework.vsum.branch.storage.AuditLogger;
 import tools.vitruv.framework.vsum.branch.storage.ChangeOrigin;
 import tools.vitruv.framework.vsum.branch.storage.DeletionConflictResolver;
+import tools.vitruv.framework.vsum.branch.storage.OwnerEscalationStore;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangeEntry;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangeType;
 
@@ -153,7 +154,8 @@ class MergeManagerEscalationTest {
                         "deleted-uuid", "feature", "main", "Owner denied",
                         List.of("methodologist@example.com")));
 
-                MergePolicy methodologistPolicy = MergePolicy.forRole(RoleDefinition.methodologist());
+                MergePolicy methodologistPolicy = new MergePolicy(
+                        DeletionPolicy.RESTRICT_DELETIONS, RoleDefinition.methodologist());
                 List<DeletionConflictResolver.Resolution> resolutions =
                         manager.resolveDeletionConflicts(methodologistPolicy, "feature");
 

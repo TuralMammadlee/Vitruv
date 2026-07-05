@@ -75,7 +75,7 @@ class ConflictOwnershipResolverTest {
         private ConflictTestFixtures() {
         }
 
-        static DeletionConflict deletionConflictWithOriginalUpdates(String updatingBranch, String deletingBranch) {
+        static DeletionConflict deletionConflictWithOriginalUpdates(String deletingBranch, String updatingBranch) {
             SemanticChangeEntry update = SemanticChangeEntry.builder()
                     .index(0)
                     .changeType(SemanticChangeType.ATTRIBUTE_CHANGED)
@@ -90,7 +90,7 @@ class ConflictOwnershipResolverTest {
                     Set.of(), false);
         }
 
-        static DeletionConflict deletionConflictWithConsequentialUpdates(String updatingBranch, String deletingBranch) {
+        static DeletionConflict deletionConflictWithConsequentialUpdates(String deletingBranch, String updatingBranch) {
             SemanticChangeEntry update = SemanticChangeEntry.builder()
                     .index(0)
                     .changeType(SemanticChangeType.ATTRIBUTE_CHANGED)

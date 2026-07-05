@@ -398,7 +398,7 @@ public class MergeManager {
                 final ChangelogDocument srcChangelog = sourceChangelog;
                 final ChangelogDocument tgtChangelog = targetChangelog;
                 final RoleManager ownershipRoles = roleManagerForOwnership;
-                Set<String> unionOwners = new LinkedHashSet<>();
+                Set<String> unionOwners = new LinkedHashSet<>(lastDetectedConflictOwners);
                 this.lastDeletionConflicts = this.lastDeletionConflicts.stream()
                         .map(c -> {
                             Set<String> owners = conflictOwnershipResolver.resolveOwners(
