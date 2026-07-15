@@ -103,34 +103,38 @@ public class UpdateConflict {
     /**
      * Computes the severity from the permutation and fundamental type.
      *
-     * <p>Rules (kept intentionally simple, in line with the in-scope wiring):
+     * <p>The full severity range is used so that interactive resolution can
+     * branch on it (low-risk conflicts offer a quick accept-source/target choice,
+     * while HIGH and CRITICAL force a detailed inspection):
      * <ul>
-     *   <li>{@link OriginPermutation#UNKNOWN_UNKNOWN}: {@link ConflictSeverity#MEDIUM}
-     *       (conservative: we can't reason about origins).</li>
-     *   <li>Mixed origin ({@link OriginPermutation#O_C} / {@link OriginPermutation#C_O}):
-     *       {@link ConflictSeverity#MEDIUM} — auto-resolvable in favor of the human
-     *       change, low residual risk.</li>
-     *   <li>{@link OriginPermutation#C_C}: {@link ConflictSeverity#HIGH} — both
-     *       sides are engine-generated, indicating a likely consistency-rule
-     *       collision that needs review.</li>
-     *   <li>{@link OriginPermutation#O_O}: {@link ConflictSeverity#HIGH} when the
-     *       conflict is {@link FundamentalConflictType#SEMANTIC} (reference/topology
-     *       impact), otherwise {@link ConflictSeverity#MEDIUM}.</li>
+     *   <li>Mixed origin ({@link OriginPermutation#O_C} / {@link OriginPermutation#C_O})
+     *       that is {@link FundamentalConflictType#SYNTACTIC}: {@link ConflictSeverity#LOW}
+     *       — deterministically auto-resolvable in favour of the human change with
+     *       minimal residual risk.</li>
+     *   <li>Mixed origin that is {@link FundamentalConflictType#SEMANTIC}, or
+     *       {@link OriginPermutation#UNKNOWN_UNKNOWN}, or {@link OriginPermutation#O_O}
+     *       that is {@link FundamentalConflictType#SYNTACTIC}: {@link ConflictSeverity#MEDIUM}.</li>
+     *   <li>{@link OriginPermutation#O_O} that is {@link FundamentalConflictType#SEMANTIC},
+     *       or {@link OriginPermutation#C_C} that is {@link FundamentalConflictType#SYNTACTIC}:
+     *       {@link ConflictSeverity#HIGH}.</li>
+     *   <li>{@link OriginPermutation#C_C} that is {@link FundamentalConflictType#SEMANTIC}:
+     *       {@link ConflictSeverity#CRITICAL} — both sides are engine-generated and the
+     *       model topology is affected, the most dangerous combination.</li>
      * </ul>
      */
     public ConflictSeverity getSeverity() {
+        boolean semantic = fundamentalType == FundamentalConflictType.SEMANTIC;
         if (originPermutation == OriginPermutation.UNKNOWN_UNKNOWN) {
             return ConflictSeverity.MEDIUM;
         }
         if (originPermutation.isMixedOrigin()) {
-            return ConflictSeverity.MEDIUM;
+            return semantic ? ConflictSeverity.MEDIUM : ConflictSeverity.LOW;
         }
         if (originPermutation == OriginPermutation.C_C) {
-            return ConflictSeverity.HIGH;
+            return semantic ? ConflictSeverity.CRITICAL : ConflictSeverity.HIGH;
         }
-        return fundamentalType == FundamentalConflictType.SEMANTIC
-                ? ConflictSeverity.HIGH
-                : ConflictSeverity.MEDIUM;
+        // O_O
+        return semantic ? ConflictSeverity.HIGH : ConflictSeverity.MEDIUM;
     }
 
     /**

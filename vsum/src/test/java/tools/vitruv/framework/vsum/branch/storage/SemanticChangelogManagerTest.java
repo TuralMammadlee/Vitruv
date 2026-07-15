@@ -11,9 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import tools.vitruv.change.atomic.EChange;
 import tools.vitruv.change.atomic.eobject.CreateEObject;
+import tools.vitruv.change.atomic.uuid.Uuid;
 import tools.vitruv.change.atomic.uuid.UuidResolver;
+import tools.vitruv.framework.vsum.branch.data.ConsequentialFootprint;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -47,6 +50,17 @@ class SemanticChangelogManagerTest {
     private static final String AUTHOR      = "Alice";
     private static final LocalDateTime DATE = LocalDateTime.of(2026, 3, 19, 10, 0, 0);
     private static final String MESSAGE     = "Add entity model";
+
+    /** Reflects into Uuid's package-private constructor so tests can create Uuid instances. */
+    private static Uuid uuid(String raw) {
+        try {
+            Constructor<Uuid> ctor = Uuid.class.getDeclaredConstructor(String.class);
+            ctor.setAccessible(true);
+            return ctor.newInstance(raw);
+        } catch (Exception e) {
+            throw new RuntimeException("Cannot create Uuid via reflection", e);
+        }
+    }
 
     @BeforeEach
     void setUp() {
@@ -299,5 +313,110 @@ class SemanticChangelogManagerTest {
         Path file = repoRoot.resolve(".vitruvius/changelogs/" + SemanticChangelogManagerTest.BRANCH + "/json/" + SemanticChangelogManagerTest.SHORT_SHA + ".json");
         assertTrue(Files.exists(file), "changelog file must exist: " + file);
         return new Gson().fromJson(Files.readString(file), SemanticChangelogManager.ChangelogDocument.class);
+    }
+
+    // ------------------------------------------------------------------ //
+    //  Consequential footprint recording                                  //
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Verifies that {@code writeAnnotated} populates the
+     * {@code consequentialFootprints} field from CONSEQUENTIAL entries that have
+     * a non-null, non-"unknown" UUID and a non-null feature name, and that the
+     * plain {@code write} path always writes {@code null} for that field.
+     */
+    @Nested
+    @DisplayName("consequentialFootprints field")
+    class ConsequentialFootprintTests {
+
+        @Test
+        @DisplayName("plain write always produces null consequentialFootprints")
+        void plainWriteProducesNullFootprints() throws IOException {
+            manager.write(COMMIT_SHA, BRANCH, AUTHOR, DATE, MESSAGE, List.of(), changesByResource(), List.of(), uuidResolver);
+            var doc = readDocument();
+            assertNull(doc.consequentialFootprints,
+                    "plain write must set consequentialFootprints to null (origins unknown)");
+        }
+
+        @Test
+        @DisplayName("writeAnnotated with no CONSEQUENTIAL changes produces empty footprint list")
+        void noConsequentialChangesProducesEmptyFootprints() throws IOException {
+            // Build a minimal annotated map with only an ORIGINAL change
+            var original = new SemanticChangeBuffer.AnnotatedEChange(createChange, ChangeOrigin.ORIGINAL);
+            Map<String, List<SemanticChangeBuffer.AnnotatedEChange>> annotated = Map.of(
+                    "file:///models/Test.xmi", List.of(original));
+
+            when(createChange.getAffectedElement()).thenReturn(element);
+            when(element.eClass()).thenReturn(null);
+            when(uuidResolver.hasUuid(element)).thenReturn(true);
+
+            manager.writeAnnotated(COMMIT_SHA, BRANCH, AUTHOR, DATE, MESSAGE,
+                    List.of(), annotated, List.of(), uuidResolver);
+
+            var doc = readDocument();
+            assertNotNull(doc.consequentialFootprints, "writeAnnotated must always populate the field");
+            assertTrue(doc.consequentialFootprints.isEmpty(),
+                    "no CONSEQUENTIAL changes → empty footprint list");
+        }
+
+        @Test
+        @DisplayName("writeAnnotated collects footprints only from CONSEQUENTIAL entries with known uuid+feature")
+        void consequentialChangePopulatesFootprint() throws IOException {
+            // Mock a ReplaceSingleValuedEAttribute so the converter produces a feature+uuid entry
+            var attrChange = mock(tools.vitruv.change.atomic.feature.attribute.ReplaceSingleValuedEAttribute.class);
+            var eAttr = mock(org.eclipse.emf.ecore.EAttribute.class);
+            when(eAttr.getName()).thenReturn("name");
+            when(attrChange.getAffectedElement()).thenReturn(element);
+            when(attrChange.getAffectedFeature()).thenReturn(eAttr);
+            when(element.eClass()).thenReturn(null);
+            when(uuidResolver.hasUuid(element)).thenReturn(true);
+            when(uuidResolver.getUuid(element)).thenReturn(uuid("11111111-0000-0000-0000-000000000001"));
+            // container
+            when(element.eContainer()).thenReturn(null);
+
+            var consequential = new SemanticChangeBuffer.AnnotatedEChange(
+                    (EChange<EObject>) (EChange<?>) attrChange, ChangeOrigin.CONSEQUENTIAL);
+            Map<String, List<SemanticChangeBuffer.AnnotatedEChange>> annotated = Map.of(
+                    "file:///models/Test.xmi", List.of(consequential));
+
+            manager.writeAnnotated(COMMIT_SHA, BRANCH, AUTHOR, DATE, MESSAGE,
+                    List.of(), annotated, List.of(), uuidResolver);
+
+            var doc = readDocument();
+            assertNotNull(doc.consequentialFootprints);
+            assertEquals(1, doc.consequentialFootprints.size());
+            ConsequentialFootprint fp = doc.consequentialFootprints.get(0);
+            // Uuid#toString() yields a debug-formatted "Uuid(<raw>)" wrapper (see
+            // EChangeToEntryConverterTest for the same convention), so match on
+            // containment rather than exact equality.
+            assertTrue(fp.elementUuid().contains("11111111-0000-0000-0000-000000000001"));
+            assertEquals("name", fp.feature());
+        }
+
+        @Test
+        @DisplayName("duplicate CONSEQUENTIAL changes for the same element-feature are de-duplicated")
+        void duplicateConsequentialChangesAreDeduped() throws IOException {
+            var attrChange = mock(tools.vitruv.change.atomic.feature.attribute.ReplaceSingleValuedEAttribute.class);
+            var eAttr = mock(org.eclipse.emf.ecore.EAttribute.class);
+            when(eAttr.getName()).thenReturn("name");
+            when(attrChange.getAffectedElement()).thenReturn(element);
+            when(attrChange.getAffectedFeature()).thenReturn(eAttr);
+            when(element.eClass()).thenReturn(null);
+            when(uuidResolver.hasUuid(element)).thenReturn(true);
+            when(uuidResolver.getUuid(element)).thenReturn(uuid("11111111-0000-0000-0000-000000000001"));
+            when(element.eContainer()).thenReturn(null);
+
+            var c1 = new SemanticChangeBuffer.AnnotatedEChange((EChange<EObject>) (EChange<?>) attrChange, ChangeOrigin.CONSEQUENTIAL);
+            var c2 = new SemanticChangeBuffer.AnnotatedEChange((EChange<EObject>) (EChange<?>) attrChange, ChangeOrigin.CONSEQUENTIAL);
+            Map<String, List<SemanticChangeBuffer.AnnotatedEChange>> annotated = Map.of(
+                    "file:///models/Test.xmi", List.of(c1, c2));
+
+            manager.writeAnnotated(COMMIT_SHA, BRANCH, AUTHOR, DATE, MESSAGE,
+                    List.of(), annotated, List.of(), uuidResolver);
+
+            var doc = readDocument();
+            assertEquals(1, doc.consequentialFootprints.size(),
+                    "two identical footprints must collapse to one");
+        }
     }
 }

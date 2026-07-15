@@ -16,6 +16,7 @@ import tools.vitruv.framework.vsum.branch.data.BranchMetadata;
 import tools.vitruv.framework.vsum.branch.data.BranchState;
 import tools.vitruv.framework.vsum.branch.data.DeletionConflict;
 import tools.vitruv.framework.vsum.branch.data.DeletionPolicy;
+import tools.vitruv.framework.vsum.branch.data.ManualResolution;
 import tools.vitruv.framework.vsum.branch.data.MergePolicy;
 import tools.vitruv.framework.vsum.branch.data.ModelMergeResult;
 import tools.vitruv.framework.vsum.branch.data.SeverityThresholds;
@@ -125,6 +126,29 @@ public class MergeManager {
     private DomainValidator domainValidator = DomainValidator.NONE;
 
     /**
+     * Learned/model-based advisor consulted after the domain validator.
+     * Auto-discovered at construction via the
+     * {@link ConflictResolutionAdvisorProvider} SPI (e.g. the agentic local-LLM
+     * stack, when the repository has opted in through
+     * {@code .vitruvius/config/agentic-advisor.json}); falls back to
+     * {@link ConflictResolutionAdvisor#NONE} (rule-only behaviour).
+     */
+    private ConflictResolutionAdvisor resolutionAdvisor = ConflictResolutionAdvisor.NONE;
+
+    /**
+     * Minimum confidence required before a {@link #resolutionAdvisor} proposal
+     * is applied automatically instead of being routed to the UI.
+     */
+    private double advisorConfidenceThreshold = UpdateConflictResolver.DEFAULT_CONFIDENCE_THRESHOLD;
+
+    /**
+     * Interactive strategy for the conflicts that survive every automatic tier.
+     * Defaults to {@link ConflictResolutionStrategy#DEFER_ALL}, which leaves them
+     * unresolved so the caller can decide what to do.
+     */
+    private ConflictResolutionStrategy resolutionStrategy = ConflictResolutionStrategy.DEFER_ALL;
+
+    /**
      * Creates a new MergeManager for the Git repository at the given path.
      * @param repoRoot the root directory of the Git repository.
      * @throws IllegalArgumentException if the path is not a valid Git repository.
@@ -138,6 +162,32 @@ public class MergeManager {
         this.updateConflictAnalyzer = new UpdateConflictAnalyzer();
         this.conflictOwnerResolver = new ConflictOwnerResolver();
         loadSeverityThresholds();
+        this.resolutionAdvisor = discoverResolutionAdvisor();
+    }
+
+    /**
+     * Discovers a learned/model-based advisor through the
+     * {@link ConflictResolutionAdvisorProvider} SPI. The first provider that
+     * offers an advisor for this repository wins; when none does (the default —
+     * providers decline unless the repository carries their opt-in config), the
+     * pipeline stays rule-only. Discovery is best-effort: any failure degrades
+     * to {@link ConflictResolutionAdvisor#NONE} and can never block merges.
+     */
+    private ConflictResolutionAdvisor discoverResolutionAdvisor() {
+        try {
+            for (ConflictResolutionAdvisorProvider provider
+                    : java.util.ServiceLoader.load(ConflictResolutionAdvisorProvider.class)) {
+                java.util.Optional<ConflictResolutionAdvisor> advisor = provider.createAdvisor(repoRoot);
+                if (advisor.isPresent()) {
+                    LOGGER.info("Conflict-resolution advisor auto-installed via provider {}",
+                            provider.getClass().getSimpleName());
+                    return advisor.get();
+                }
+            }
+        } catch (java.util.ServiceConfigurationError | RuntimeException e) {
+            LOGGER.warn("Advisor auto-discovery failed; continuing rule-only: {}", e.getMessage());
+        }
+        return ConflictResolutionAdvisor.NONE;
     }
 
     /**
@@ -528,6 +578,48 @@ public class MergeManager {
     }
 
     /**
+     * Installs a learned/model-based advisor for the tier that runs after the
+     * domain validator. Proposals are applied automatically only when their
+     * confidence is at or above the configured threshold (see
+     * {@link #setAdvisorConfidenceThreshold(double)}); otherwise the conflict is
+     * routed to the interactive strategy. Defaults to
+     * {@link ConflictResolutionAdvisor#NONE}.
+     *
+     * @param resolutionAdvisor the advisor to install, must not be null.
+     */
+    public void setResolutionAdvisor(ConflictResolutionAdvisor resolutionAdvisor) {
+        this.resolutionAdvisor = Objects.requireNonNull(resolutionAdvisor,
+                "resolutionAdvisor must not be null");
+    }
+
+    /**
+     * Sets the minimum confidence in {@code [0,1]} required before a
+     * {@link #setResolutionAdvisor(ConflictResolutionAdvisor) resolution advisor}
+     * proposal is applied automatically.
+     *
+     * @param threshold the acceptance threshold.
+     * @throws IllegalArgumentException if the threshold is outside {@code [0,1]}.
+     */
+    public void setAdvisorConfidenceThreshold(double threshold) {
+        if (threshold < 0.0 || threshold > 1.0) {
+            throw new IllegalArgumentException("threshold must be in [0,1]");
+        }
+        this.advisorConfidenceThreshold = threshold;
+    }
+
+    /**
+     * Installs the interactive strategy used for update conflicts that survive
+     * every automatic tier. Defaults to {@link ConflictResolutionStrategy#DEFER_ALL},
+     * which leaves such conflicts unresolved.
+     *
+     * @param resolutionStrategy the strategy to install, must not be null.
+     */
+    public void setResolutionStrategy(ConflictResolutionStrategy resolutionStrategy) {
+        this.resolutionStrategy = Objects.requireNonNull(resolutionStrategy,
+                "resolutionStrategy must not be null");
+    }
+
+    /**
      * Returns {@code true} if the most recent merge detected any semantic
      * conflicts (deletion or update).
      */
@@ -612,16 +704,22 @@ public class MergeManager {
     }
 
     /**
-     * Resolves update-vs-update conflicts using the three-tier auto-resolution
-     * strategy of {@link UpdateConflictResolver}.
+     * Resolves update-vs-update conflicts using the automatic tiers of
+     * {@link UpdateConflictResolver}.
      *
      * <p>Tier 1 (origin rule) fires first: if one side is ORIGINAL and the
      * other is CONSEQUENTIAL, the ORIGINAL side wins without UI. Tier 2
      * (domain validator) then handles same-origin conflicts where a
      * domain-specific default has been registered via
-     * {@link #setDomainValidator(DomainValidator)}. Anything not resolved by
-     * either tier is placed in {@link AutoResolutionOutcome#getUnresolved()}
-     * for the UI to handle.
+     * {@link #setDomainValidator(DomainValidator)}. Tier 3 (learned advisor,
+     * see {@link #setResolutionAdvisor(ConflictResolutionAdvisor)}) puts each
+     * confident proposal before the configured
+     * {@link ConflictResolutionStrategy#reviewProposal(tools.vitruv.framework.vsum.branch.data.UpdateConflict, tools.vitruv.framework.vsum.branch.data.ResolutionProposal)
+     * proposal review} — interactive strategies let the user confirm or
+     * override; non-interactive ones auto-confirm. Anything not resolved is
+     * placed in {@link AutoResolutionOutcome#getUnresolved()} for the
+     * interactive strategy or the caller to handle, with below-threshold
+     * proposals attached as advisory hints.
      *
      * <p>Auto-resolved decisions are appended to the current merge session's
      * audit log so the trail is identical no matter whether callers invoke this
@@ -631,34 +729,94 @@ public class MergeManager {
      *         needs manual intervention.
      */
     public AutoResolutionOutcome resolveUpdateConflicts() {
-        AutoResolutionOutcome outcome = new UpdateConflictResolver(domainValidator).resolve(lastUpdateConflicts);
+        AutoResolutionOutcome outcome =
+                new UpdateConflictResolver(domainValidator, resolutionAdvisor,
+                        advisorConfidenceThreshold, resolutionStrategy)
+                        .resolve(lastUpdateConflicts);
         auditUpdateOutcome(outcome);
         return outcome;
     }
 
     /**
+     * Runs the configured interactive {@link ConflictResolutionStrategy} over the
+     * conflicts that the automatic tiers could not settle, returning the human
+     * decisions for the ones that were resolved.
+     *
+     * <p>Deferred conflicts are skipped (not audited) and remain the caller's
+     * responsibility. Resolved decisions are appended to the merge session's
+     * audit log and flushed synchronously. With the default
+     * {@link ConflictResolutionStrategy#DEFER_ALL} this is a no-op.
+     *
+     * @param unresolved the conflicts left after auto-resolution, never null.
+     * @return the still-unresolved (deferred) conflicts.
+     */
+    public List<UpdateConflict> resolveUpdateConflictsInteractively(List<UpdateConflict> unresolved) {
+        Objects.requireNonNull(unresolved, "unresolved must not be null");
+        return resolveInteractively(unresolved, AutoResolutionOutcome.empty());
+    }
+
+    /**
+     * Variant of {@link #resolveUpdateConflictsInteractively(List)} that also
+     * surfaces the automatic pass's advisory proposals (advisor suggestions that
+     * did not clear the confidence threshold) to the interactive strategy, per
+     * the activity diagram's "confidence below threshold" branch.
+     *
+     * @param outcome the outcome of the automatic pass, never null.
+     * @return the still-unresolved (deferred) conflicts.
+     */
+    public List<UpdateConflict> resolveUpdateConflictsInteractively(AutoResolutionOutcome outcome) {
+        Objects.requireNonNull(outcome, "outcome must not be null");
+        return resolveInteractively(outcome.getUnresolved(), outcome);
+    }
+
+    private List<UpdateConflict> resolveInteractively(List<UpdateConflict> unresolved,
+                                                      AutoResolutionOutcome outcome) {
+        List<UpdateConflict> stillUnresolved = new ArrayList<>();
+        List<ManualResolution> decisions = new ArrayList<>();
+        for (UpdateConflict conflict : unresolved) {
+            ManualResolution resolution = outcome.getAdvisoryProposal(conflict)
+                    .map(advisory -> resolutionStrategy.resolve(conflict, advisory))
+                    .orElseGet(() -> resolutionStrategy.resolve(conflict));
+            if (resolution.isResolved()) {
+                decisions.add(resolution);
+            } else {
+                stillUnresolved.add(conflict);
+            }
+        }
+        auditManualUpdateResolutions(decisions);
+        return stillUnresolved;
+    }
+
+    /**
      * Convenience method that resolves all semantic conflicts (deletion + update)
-     * in one call. Runs deletion resolution first (interactive via CLI), then
-     * update resolution (automatic via three-tier strategy).
+     * in one call. Runs deletion resolution first (interactive via CLI), then the
+     * automatic update tiers, then the interactive strategy over whatever is left.
      *
      * @param mergePolicy  the policy for approval and role-based guardrails.
      * @param sourceBranch the source branch name (for ancestor lookup).
+     * @return an outcome whose {@link AutoResolutionOutcome#getUnresolved()} lists
+     *         the update conflicts that still require attention after both the
+     *         automatic and interactive passes.
      * @throws BranchOperationException if ancestor recovery fails.
      */
-    public void resolveAllConflicts(MergePolicy mergePolicy, String sourceBranch)
+    public AutoResolutionOutcome resolveAllConflicts(MergePolicy mergePolicy, String sourceBranch)
             throws BranchOperationException {
         // Deletion conflicts — interactive; audit log is flushed synchronously inside before JGit ops
         List<DeletionConflictResolver.Resolution> deletionResolutions =
                 resolveDeletionConflicts(mergePolicy, sourceBranch);
         LOGGER.info("Resolved {} deletion conflict(s)", deletionResolutions.size());
 
-        // Update conflicts — fully automatic (three-tier strategy). resolveUpdateConflicts()
-        // records its own decisions into the same session audit log opened above.
+        // Update conflicts — automatic tiers first (origin rule, domain validator, advisor).
         AutoResolutionOutcome updateOutcome = resolveUpdateConflicts();
         LOGGER.info("Update conflicts: {}/{} auto-resolved, {} require manual input",
                 updateOutcome.getAutoResolved().size(),
                 updateOutcome.totalCount(),
                 updateOutcome.getUnresolved().size());
+
+        // Interactive pass over the remainder (advisory proposals included),
+        // then report what is still open.
+        List<UpdateConflict> stillUnresolved = resolveUpdateConflictsInteractively(updateOutcome);
+        return AutoResolutionOutcome.of(updateOutcome.getAutoResolved(), stillUnresolved);
     }
 
     /**
@@ -673,6 +831,22 @@ public class MergeManager {
         }
         for (AutoResolutionOutcome.ResolvedConflict resolved : outcome.getAutoResolved()) {
             sessionAuditLogger.log(AuditLogEntry.forUpdateAutoResolved(resolved, lastSourceBranch, lastTargetBranch));
+        }
+        flushSessionAuditLog();
+    }
+
+    /**
+     * Records interactively resolved update decisions in the current merge
+     * session's audit log and flushes it synchronously to disk.
+     *
+     * <p>No-op when there are no decisions or no audit session is active.
+     */
+    private void auditManualUpdateResolutions(List<ManualResolution> decisions) {
+        if (decisions.isEmpty() || sessionAuditLogger == null) {
+            return;
+        }
+        for (ManualResolution decision : decisions) {
+            sessionAuditLogger.log(AuditLogEntry.forUpdateManual(decision, lastSourceBranch, lastTargetBranch));
         }
         flushSessionAuditLog();
     }

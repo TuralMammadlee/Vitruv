@@ -33,9 +33,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * using {@link StandardOpenOption#SYNC} so the OS page cache is bypassed and the
  * bytes land on the storage device before {@link #flush()} returns.
  *
- * <p>Log entries are serialized as a JSON array.  Entries with a {@code null}
- * {@code rationale} field omit the key from the JSON output (Gson's default
- * behaviour for null fields) so that auto-resolved entries stay compact.
+ * <p>Log entries are serialized as a JSON array.  Null fields (such as the
+ * {@code rationale} of an auto-resolved entry) are written explicitly as
+ * {@code null} because the serializer is configured with
+ * {@link com.google.gson.GsonBuilder#serializeNulls()}, which keeps every
+ * entry's shape uniform and self-describing on disk.
  */
 public class AuditLogger {
 

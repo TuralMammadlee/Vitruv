@@ -1,0 +1,400 @@
+<svg width="682pt" height="1815pt" viewBox="0.00 0.00 682.00 1815.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(18 1797.36)">
+<title>AgenticConflictResolutionWorkflow</title>
+<polygon fill="white" stroke="none" points="-18,18 -18,-1797.36 664.34,-1797.36 664.34,18 -18,18"/>
+<text xml:space="preserve" text-anchor="middle" x="323.17" y="-1763.66" font-family="Helvetica,sans-Serif" font-size="13.00">Vitruv Agentic AI Conflict Resolution Workflow</text>
+<g id="clust1" class="cluster">
+<title>cluster_agentic</title>
+<path fill="#fbf7ee" stroke="#8a7a55" d="M115,-409.33C115,-409.33 582,-409.33 582,-409.33 588,-409.33 594,-415.33 594,-421.33 594,-421.33 594,-1141.02 594,-1141.02 594,-1147.02 588,-1153.02 582,-1153.02 582,-1153.02 115,-1153.02 115,-1153.02 109,-1153.02 103,-1147.02 103,-1141.02 103,-1141.02 103,-421.33 103,-421.33 103,-415.33 109,-409.33 115,-409.33"/>
+<text xml:space="preserve" text-anchor="middle" x="348.5" y="-1139.12" font-family="Helvetica,sans-Serif" font-size="11.00">Local Ollama ReAct loop</text>
+</g>
+<!-- start -->
+<g id="node1" class="node">
+<title>start</title>
+<ellipse fill="#e8e8e8" stroke="#2b2b2b" cx="210" cy="-1726.57" rx="87.69" ry="29.19"/>
+<text xml:space="preserve" text-anchor="middle" x="210" y="-1729.57" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Start</text>
+<text xml:space="preserve" text-anchor="middle" x="210" y="-1717.57" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">UpdateConflict detected</text>
+</g>
+<!-- tier1 -->
+<g id="node2" class="node">
+<title>tier1</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="210,-1664.38 112.7,-1623.1 210,-1581.82 307.3,-1623.1 210,-1664.38"/>
+<text xml:space="preserve" text-anchor="middle" x="210" y="-1626.1" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Tier 1 : Origin rule</text>
+<text xml:space="preserve" text-anchor="middle" x="210" y="-1614.1" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">mixed origin?</text>
+</g>
+<!-- start&#45;&gt;tier1 -->
+<g id="edge1" class="edge">
+<title>start-&gt;tier1</title>
+<path fill="none" stroke="#2b2b2b" d="M210,-1697.03C210,-1689.63 210,-1681.46 210,-1673.33"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="212.45,-1673.42 210,-1666.42 207.55,-1673.42 212.45,-1673.42"/>
+</g>
+<!-- tier1_resolve -->
+<g id="node3" class="node">
+<title>tier1_resolve</title>
+<polygon fill="#dfe9f7" stroke="#2b2b2b" points="161.16,-1515.74 48.84,-1515.74 48.84,-1479.74 161.16,-1479.74 161.16,-1515.74"/>
+<text xml:space="preserve" text-anchor="middle" x="105" y="-1494.74" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Keep ORIGINAL side</text>
+</g>
+<!-- tier1&#45;&gt;tier1_resolve -->
+<g id="edge2" class="edge">
+<title>tier1-&gt;tier1_resolve</title>
+<path fill="none" stroke="#2b2b2b" d="M184.58,-1592.23C166.37,-1570.84 142.17,-1542.4 125.26,-1522.53"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="127.2,-1521.04 120.8,-1517.3 123.47,-1524.22 127.2,-1521.04"/>
+<text xml:space="preserve" text-anchor="middle" x="167.65" y="-1557.72" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">yes</text>
+</g>
+<!-- tier2 -->
+<g id="node4" class="node">
+<title>tier2</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="368,-1539.02 242.9,-1497.74 368,-1456.46 493.1,-1497.74 368,-1539.02"/>
+<text xml:space="preserve" text-anchor="middle" x="368" y="-1500.74" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Tier 2 : DomainValidator</text>
+<text xml:space="preserve" text-anchor="middle" x="368" y="-1488.74" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">default available?</text>
+</g>
+<!-- tier1&#45;&gt;tier2 -->
+<g id="edge3" class="edge">
+<title>tier1-&gt;tier2</title>
+<path fill="none" stroke="#2b2b2b" d="M243.51,-1595.93C267.21,-1577.43 299.19,-1552.46 324.81,-1532.46"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="326.31,-1534.4 330.32,-1528.16 323.29,-1530.53 326.31,-1534.4"/>
+<text xml:space="preserve" text-anchor="middle" x="298.74" y="-1557.72" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">no</text>
+</g>
+<!-- audit_log -->
+<g id="node24" class="node">
+<title>audit_log</title>
+<polygon fill="#f5f5f5" stroke="#2b2b2b" points="316.58,-110.41 131.42,-110.41 131.42,-74.41 316.58,-74.41 316.58,-110.41"/>
+<text xml:space="preserve" text-anchor="middle" x="224" y="-89.41" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Append outcome to ResolutionHistory</text>
+</g>
+<!-- tier1_resolve&#45;&gt;audit_log -->
+<g id="edge4" class="edge">
+<title>tier1_resolve-&gt;audit_log</title>
+<path fill="none" stroke="#2b2b2b" d="M86.71,-1479.3C56.63,-1450.63 0,-1396.66 0,-1396.66 0,-1396.66 0,-1396.66 0,-163.05 0,-163.05 93.64,-133.94 159.84,-113.36"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="160.36,-115.76 166.32,-111.34 158.91,-111.08 160.36,-115.76"/>
+</g>
+<!-- tier2_resolve -->
+<g id="node5" class="node">
+<title>tier2_resolve</title>
+<polygon fill="#dfe9f7" stroke="#2b2b2b" points="646.34,-1413.66 535.66,-1413.66 535.66,-1377.66 646.34,-1377.66 646.34,-1413.66"/>
+<text xml:space="preserve" text-anchor="middle" x="591" y="-1392.66" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Apply domain default</text>
+</g>
+<!-- tier2&#45;&gt;tier2_resolve -->
+<g id="edge5" class="edge">
+<title>tier2-&gt;tier2_resolve</title>
+<path fill="none" stroke="#2b2b2b" d="M420.28,-1473.27C458.02,-1456.34 508.51,-1433.68 544.78,-1417.4"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="545.53,-1419.75 550.91,-1414.65 543.52,-1415.28 545.53,-1419.75"/>
+<text xml:space="preserve" text-anchor="middle" x="519.51" y="-1432.36" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">yes</text>
+</g>
+<!-- tier3 -->
+<g id="node6" class="node">
+<title>tier3</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="474.46,-1413.66 261.54,-1413.66 261.54,-1377.66 474.46,-1377.66 474.46,-1413.66"/>
+<text xml:space="preserve" text-anchor="middle" x="368" y="-1392.66" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Tier 3 : CompositeConflictResolutionAdvisor</text>
+</g>
+<!-- tier2&#45;&gt;tier3 -->
+<g id="edge6" class="edge">
+<title>tier2-&gt;tier3</title>
+<path fill="none" stroke="#2b2b2b" d="M368,-1456.03C368,-1444.73 368,-1432.77 368,-1422.57"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="370.45,-1422.63 368,-1415.63 365.55,-1422.63 370.45,-1422.63"/>
+<text xml:space="preserve" text-anchor="middle" x="373.01" y="-1432.36" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">no</text>
+</g>
+<!-- tier2_resolve&#45;&gt;audit_log -->
+<g id="edge7" class="edge">
+<title>tier2_resolve-&gt;audit_log</title>
+<path fill="none" stroke="#2b2b2b" d="M599.16,-1377.44C608.93,-1356.82 624,-1325.02 624,-1325.02 624,-1325.02 624,-1325.02 624,-163.05 624,-163.05 443.59,-131.64 325.09,-111.01"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="325.83,-108.65 318.52,-109.86 324.99,-113.48 325.83,-108.65"/>
+</g>
+<!-- baseline -->
+<g id="node7" class="node">
+<title>baseline</title>
+<polygon fill="#f5f5f5" stroke="#2b2b2b" points="420.27,-1344.66 315.73,-1344.66 315.73,-1303.38 420.27,-1303.38 420.27,-1344.66"/>
+<text xml:space="preserve" text-anchor="middle" x="368" y="-1327.02" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">AuditHistoryAdvisor</text>
+<text xml:space="preserve" text-anchor="middle" x="368" y="-1315.02" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">statistical baseline</text>
+</g>
+<!-- tier3&#45;&gt;baseline -->
+<g id="edge8" class="edge">
+<title>tier3-&gt;baseline</title>
+<path fill="none" stroke="#2b2b2b" d="M368,-1377.44C368,-1370.15 368,-1361.45 368,-1353.27"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="370.45,-1353.51 368,-1346.51 365.55,-1353.51 370.45,-1353.51"/>
+</g>
+<!-- baseline_ok -->
+<g id="node8" class="node">
+<title>baseline_ok</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="368,-1270.38 271.23,-1229.1 368,-1187.82 464.77,-1229.1 368,-1270.38"/>
+<text xml:space="preserve" text-anchor="middle" x="368" y="-1232.1" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Enough history</text>
+<text xml:space="preserve" text-anchor="middle" x="368" y="-1220.1" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">for this signature?</text>
+</g>
+<!-- baseline&#45;&gt;baseline_ok -->
+<g id="edge9" class="edge">
+<title>baseline-&gt;baseline_ok</title>
+<path fill="none" stroke="#2b2b2b" d="M368,-1303.31C368,-1296.2 368,-1287.82 368,-1279.31"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="370.45,-1279.32 368,-1272.32 365.55,-1279.32 370.45,-1279.32"/>
+</g>
+<!-- baseline_out -->
+<g id="node9" class="node">
+<title>baseline_out</title>
+<polygon fill="#f5f5f5" stroke="#2b2b2b" points="210.01,-384.33 65.99,-384.33 65.99,-343.05 210.01,-343.05 210.01,-384.33"/>
+<text xml:space="preserve" text-anchor="middle" x="138" y="-366.69" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Return proposal</text>
+<text xml:space="preserve" text-anchor="middle" x="138" y="-354.69" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">(entry, confidence, rationale)</text>
+</g>
+<!-- baseline_ok&#45;&gt;baseline_out -->
+<g id="edge10" class="edge">
+<title>baseline_ok-&gt;baseline_out</title>
+<path fill="none" stroke="#2b2b2b" d="M309.98,-1212.08C230.1,-1190.03 96,-1153.02 96,-1153.02 96,-1153.02 73,-1089.54 73,-1089.54 73,-1089.54 73,-1089.54 73,-443.03 73,-443.03 96,-409.33 96,-409.33 96,-409.33 104.25,-400.56 113.44,-390.8"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="115.16,-392.54 118.17,-385.76 111.59,-389.18 115.16,-392.54"/>
+<text xml:space="preserve" text-anchor="middle" x="80" y="-772.84" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">yes</text>
+</g>
+<!-- preflight -->
+<g id="node10" class="node">
+<title>preflight</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="395,-1117.82 244.86,-1088.54 395,-1059.26 545.14,-1088.54 395,-1117.82"/>
+<text xml:space="preserve" text-anchor="middle" x="395" y="-1085.54" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Enabled &amp; Ollama reachable?</text>
+</g>
+<!-- baseline_ok&#45;&gt;preflight -->
+<g id="edge11" class="edge">
+<title>baseline_ok-&gt;preflight</title>
+<path fill="none" stroke="#2b2b2b" d="M375.31,-1190.6C379.27,-1170.26 384.14,-1145.26 388.05,-1125.21"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="390.43,-1125.78 389.37,-1118.44 385.62,-1124.84 390.43,-1125.78"/>
+<text xml:space="preserve" text-anchor="middle" x="385.7" y="-1163.72" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">no</text>
+</g>
+<!-- threshold -->
+<g id="node21" class="node">
+<title>threshold</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="197,-310.05 118.02,-268.77 197,-227.49 275.98,-268.77 197,-310.05"/>
+<text xml:space="preserve" text-anchor="middle" x="197" y="-271.77" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Confidence ≥</text>
+<text xml:space="preserve" text-anchor="middle" x="197" y="-259.77" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">threshold?</text>
+</g>
+<!-- baseline_out&#45;&gt;threshold -->
+<g id="edge12" class="edge">
+<title>baseline_out-&gt;threshold</title>
+<path fill="none" stroke="#2b2b2b" d="M150.51,-342.98C157.07,-332.65 165.33,-319.64 173.06,-307.47"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="175.04,-308.92 176.73,-301.7 170.91,-306.29 175.04,-308.92"/>
+</g>
+<!-- iter -->
+<g id="node11" class="node">
+<title>iter</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="395,-1016.46 310.45,-975.18 395,-933.9 479.55,-975.18 395,-1016.46"/>
+<text xml:space="preserve" text-anchor="middle" x="395" y="-978.18" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Within iteration</text>
+<text xml:space="preserve" text-anchor="middle" x="395" y="-966.18" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">&amp; time budget?</text>
+</g>
+<!-- preflight&#45;&gt;iter -->
+<g id="edge13" class="edge">
+<title>preflight-&gt;iter</title>
+<path fill="none" stroke="#2b2b2b" d="M395,-1058.86C395,-1048.59 395,-1036.71 395,-1025.21"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="397.45,-1025.44 395,-1018.44 392.55,-1025.44 397.45,-1025.44"/>
+<text xml:space="preserve" text-anchor="middle" x="402" y="-1035.16" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">yes</text>
+</g>
+<!-- abstain -->
+<g id="node19" class="node">
+<title>abstain</title>
+<ellipse fill="#f3e2e2" stroke="#2b2b2b" cx="480" cy="-444.03" rx="46.03" ry="20.7"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-441.03" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">No opinion</text>
+</g>
+<!-- preflight&#45;&gt;abstain -->
+<g id="edge14" class="edge">
+<title>preflight-&gt;abstain</title>
+<path fill="none" stroke="#2b2b2b" d="M429.57,-1065.54C480.57,-1033.08 570,-976.18 570,-976.18 570,-976.18 570,-976.18 570,-832.82 570,-832.82 530,-507.54 530,-507.54 530,-507.54 512,-480.74 512,-480.74 512,-480.74 507.78,-476.02 502.4,-470.02"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="504.26,-468.43 497.76,-464.85 500.61,-471.7 504.26,-468.43"/>
+<text xml:space="preserve" text-anchor="middle" x="572.87" y="-772.84" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">no</text>
+</g>
+<!-- chat -->
+<g id="node12" class="node">
+<title>chat</title>
+<polygon fill="#f5f5f5" stroke="#2b2b2b" points="436.43,-891.1 353.57,-891.1 353.57,-849.82 436.43,-849.82 436.43,-891.1"/>
+<text xml:space="preserve" text-anchor="middle" x="395" y="-873.46" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Prompt model</text>
+<text xml:space="preserve" text-anchor="middle" x="395" y="-861.46" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">with tool specs</text>
+</g>
+<!-- iter&#45;&gt;chat -->
+<g id="edge15" class="edge">
+<title>iter-&gt;chat</title>
+<path fill="none" stroke="#2b2b2b" d="M395,-933.58C395,-922.28 395,-910.24 395,-899.81"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="397.45,-899.98 395,-892.98 392.55,-899.98 397.45,-899.98"/>
+<text xml:space="preserve" text-anchor="middle" x="402" y="-909.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">yes</text>
+</g>
+<!-- iter&#45;&gt;abstain -->
+<g id="edge16" class="edge">
+<title>iter-&gt;abstain</title>
+<path fill="none" stroke="#2b2b2b" d="M415.53,-943.71C431.52,-920 451,-891.1 451,-891.1 451,-891.1 533,-691.46 533,-691.46 533,-691.46 533,-632.9 533,-632.9 533,-632.9 517,-507.54 517,-507.54 517,-507.54 505.8,-488.61 495.72,-471.58"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="497.95,-470.54 492.28,-465.77 493.73,-473.04 497.95,-470.54"/>
+<text xml:space="preserve" text-anchor="middle" x="531.27" y="-710.16" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">no</text>
+</g>
+<!-- calls -->
+<g id="node13" class="node">
+<title>calls</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="395,-816.82 334.91,-775.54 395,-734.26 455.09,-775.54 395,-816.82"/>
+<text xml:space="preserve" text-anchor="middle" x="395" y="-778.54" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Tool call</text>
+<text xml:space="preserve" text-anchor="middle" x="395" y="-766.54" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">returned?</text>
+</g>
+<!-- chat&#45;&gt;calls -->
+<g id="edge17" class="edge">
+<title>chat-&gt;calls</title>
+<path fill="none" stroke="#2b2b2b" d="M395,-849.75C395,-842.64 395,-834.26 395,-825.75"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="397.45,-825.76 395,-818.76 392.55,-825.76 397.45,-825.76"/>
+</g>
+<!-- nudge_fallback -->
+<g id="node14" class="node">
+<title>nudge_fallback</title>
+<polygon fill="#f5f5f5" stroke="#2b2b2b" points="518.06,-682.82 387.94,-682.82 387.94,-641.54 518.06,-641.54 518.06,-682.82"/>
+<text xml:space="preserve" text-anchor="middle" x="453" y="-665.18" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Nudge once,</text>
+<text xml:space="preserve" text-anchor="middle" x="453" y="-653.18" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">then parse text or abstain</text>
+</g>
+<!-- calls&#45;&gt;nudge_fallback -->
+<g id="edge19" class="edge">
+<title>calls-&gt;nudge_fallback</title>
+<path fill="none" stroke="#2b2b2b" d="M410.54,-744.69C419.33,-727.82 430.24,-706.88 438.8,-690.45"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="440.79,-691.93 441.85,-684.59 436.44,-689.67 440.79,-691.93"/>
+<text xml:space="preserve" text-anchor="middle" x="434.2" y="-710.16" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">no</text>
+</g>
+<!-- submit -->
+<g id="node15" class="node">
+<title>submit</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="258,-691.46 156.78,-662.18 258,-632.9 359.22,-662.18 258,-691.46"/>
+<text xml:space="preserve" text-anchor="middle" x="258" y="-659.18" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">submit_resolution?</text>
+</g>
+<!-- calls&#45;&gt;submit -->
+<g id="edge18" class="edge">
+<title>calls-&gt;submit</title>
+<path fill="none" stroke="#2b2b2b" d="M367.93,-752.54C345.69,-734.46 314.12,-708.8 290.51,-689.61"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="292.23,-687.85 285.26,-685.33 289.14,-691.65 292.23,-687.85"/>
+<text xml:space="preserve" text-anchor="middle" x="329.39" y="-710.16" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">yes</text>
+</g>
+<!-- decide -->
+<g id="node17" class="node">
+<title>decide</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="337,-590.1 251.9,-548.82 337,-507.54 422.1,-548.82 337,-590.1"/>
+<text xml:space="preserve" text-anchor="middle" x="337" y="-551.82" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Validate choice</text>
+<text xml:space="preserve" text-anchor="middle" x="337" y="-539.82" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">&amp; confidence</text>
+</g>
+<!-- nudge_fallback&#45;&gt;decide -->
+<g id="edge20" class="edge">
+<title>nudge_fallback-&gt;decide</title>
+<path fill="none" stroke="#2b2b2b" d="M432.26,-641.27C415.25,-624.94 390.83,-601.49 370.97,-582.43"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="372.81,-580.8 366.06,-577.72 369.41,-584.33 372.81,-580.8"/>
+<text xml:space="preserve" text-anchor="middle" x="419.15" y="-608.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">parsed</text>
+</g>
+<!-- nudge_fallback&#45;&gt;abstain -->
+<g id="edge21" class="edge">
+<title>nudge_fallback-&gt;abstain</title>
+<path fill="none" stroke="#2b2b2b" d="M455.61,-641.05C461.44,-596.11 475,-491.54 475,-491.54 475,-491.54 475.91,-483.05 476.96,-473.32"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="479.38,-473.75 477.69,-466.53 474.5,-473.23 479.38,-473.75"/>
+<text xml:space="preserve" text-anchor="middle" x="491.48" y="-546.12" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">unparsed</text>
+</g>
+<!-- inspect -->
+<g id="node16" class="node">
+<title>inspect</title>
+<polygon fill="#f1ece0" stroke="#2b2b2b" points="222.56,-569.46 117.44,-569.46 117.44,-528.18 222.56,-528.18 222.56,-569.46"/>
+<text xml:space="preserve" text-anchor="middle" x="170" y="-551.82" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Run inspection tool,</text>
+<text xml:space="preserve" text-anchor="middle" x="170" y="-539.82" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">feed result back</text>
+</g>
+<!-- submit&#45;&gt;inspect -->
+<g id="edge23" class="edge">
+<title>submit-&gt;inspect</title>
+<path fill="none" stroke="#2b2b2b" d="M239.55,-637.83C225.37,-619.88 205.76,-595.07 190.98,-576.37"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="192.97,-574.94 186.71,-570.96 189.13,-577.97 192.97,-574.94"/>
+<text xml:space="preserve" text-anchor="middle" x="226.89" y="-608.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">no</text>
+</g>
+<!-- submit&#45;&gt;decide -->
+<g id="edge22" class="edge">
+<title>submit-&gt;decide</title>
+<path fill="none" stroke="#2b2b2b" d="M274.95,-637.29C285.34,-622.64 298.87,-603.57 310.64,-586.98"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="312.63,-588.4 314.68,-581.27 308.64,-585.56 312.63,-588.4"/>
+<text xml:space="preserve" text-anchor="middle" x="302.13" y="-608.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">yes</text>
+</g>
+<!-- inspect&#45;&gt;iter -->
+<g id="edge24" class="edge">
+<title>inspect-&gt;iter</title>
+<path fill="none" stroke="#2b2b2b" d="M162.31,-569.73C149.94,-601.76 127,-661.18 127,-661.18 127,-871.46 127,-871.46 127,-871.46 127,-871.46 262.1,-923.24 340.45,-953.27"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="339.49,-955.52 346.9,-955.74 341.25,-950.95 339.49,-955.52"/>
+</g>
+<!-- proposal -->
+<g id="node18" class="node">
+<title>proposal</title>
+<polygon fill="#dfe9f7" stroke="#2b2b2b" points="377.33,-462.03 296.67,-462.03 296.67,-426.03 377.33,-426.03 377.33,-462.03"/>
+<text xml:space="preserve" text-anchor="middle" x="337" y="-441.03" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Build proposal</text>
+</g>
+<!-- decide&#45;&gt;proposal -->
+<g id="edge25" class="edge">
+<title>decide-&gt;proposal</title>
+<path fill="none" stroke="#2b2b2b" d="M337,-507.19C337,-494.88 337,-481.71 337,-470.68"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="339.45,-470.85 337,-463.85 334.55,-470.85 339.45,-470.85"/>
+<text xml:space="preserve" text-anchor="middle" x="346.25" y="-483.44" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">valid</text>
+</g>
+<!-- decide&#45;&gt;abstain -->
+<g id="edge26" class="edge">
+<title>decide-&gt;abstain</title>
+<path fill="none" stroke="#2b2b2b" d="M367.99,-522.46C391.2,-503.46 418.96,-480.74 418.96,-480.74 418.96,-480.74 431.64,-473.32 445.44,-465.25"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="446.58,-467.42 451.39,-461.77 444.11,-463.19 446.58,-467.42"/>
+<text xml:space="preserve" text-anchor="middle" x="445.48" y="-483.44" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">invalid / none</text>
+</g>
+<!-- persist -->
+<g id="node20" class="node">
+<title>persist</title>
+<polygon fill="#f5f5f5" stroke="#2b2b2b" points="413.17,-381.69 260.83,-381.69 260.83,-345.69 413.17,-345.69 413.17,-381.69"/>
+<text xml:space="preserve" text-anchor="middle" x="337" y="-360.69" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Write agentic trace to audit log</text>
+</g>
+<!-- proposal&#45;&gt;persist -->
+<g id="edge27" class="edge">
+<title>proposal-&gt;persist</title>
+<path fill="none" stroke="#2b2b2b" d="M337,-425.65C337,-415.3 337,-401.98 337,-390.43"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="339.45,-390.54 337,-383.54 334.55,-390.54 339.45,-390.54"/>
+</g>
+<!-- abstain&#45;&gt;persist -->
+<g id="edge28" class="edge">
+<title>abstain-&gt;persist</title>
+<path fill="none" stroke="#2b2b2b" d="M451.41,-427.37C429.76,-415.51 399.8,-399.09 375.96,-386.04"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="377.42,-384.04 370.11,-382.83 375.07,-388.34 377.42,-384.04"/>
+</g>
+<!-- persist&#45;&gt;threshold -->
+<g id="edge29" class="edge">
+<title>persist-&gt;threshold</title>
+<path fill="none" stroke="#2b2b2b" d="M310.67,-345.21C290.35,-331.73 261.87,-312.82 238.5,-297.31"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="239.87,-295.28 232.68,-293.45 237.16,-299.36 239.87,-295.28"/>
+</g>
+<!-- auto -->
+<g id="node22" class="node">
+<title>auto</title>
+<polygon fill="#dfe9f7" stroke="#2b2b2b" points="179.71,-182.05 106.29,-182.05 106.29,-146.05 179.71,-146.05 179.71,-182.05"/>
+<text xml:space="preserve" text-anchor="middle" x="143" y="-161.05" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Auto-resolve</text>
+</g>
+<!-- threshold&#45;&gt;auto -->
+<g id="edge30" class="edge">
+<title>threshold-&gt;auto</title>
+<path fill="none" stroke="#2b2b2b" d="M180.21,-235.83C172.37,-220.92 163.19,-203.45 155.91,-189.6"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="158.21,-188.71 152.78,-183.66 153.87,-190.99 158.21,-188.71"/>
+<text xml:space="preserve" text-anchor="middle" x="173.77" y="-203.39" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">yes</text>
+</g>
+<!-- manual -->
+<g id="node23" class="node">
+<title>manual</title>
+<polygon fill="#eef2f7" stroke="#2b2b2b" points="339.06,-184.69 208.94,-184.69 208.94,-143.41 339.06,-143.41 339.06,-184.69"/>
+<text xml:space="preserve" text-anchor="middle" x="274" y="-167.05" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">Tier 4 : manual resolution</text>
+<text xml:space="preserve" text-anchor="middle" x="274" y="-155.05" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">(defer to user)</text>
+</g>
+<!-- threshold&#45;&gt;manual -->
+<g id="edge31" class="edge">
+<title>threshold-&gt;manual</title>
+<path fill="none" stroke="#2b2b2b" d="M218.86,-238.61C229.86,-223.93 243.11,-206.25 253.87,-191.91"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="255.78,-193.44 258.02,-186.37 251.86,-190.5 255.78,-193.44"/>
+<text xml:space="preserve" text-anchor="middle" x="251.9" y="-203.39" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#1a1a1a">no</text>
+</g>
+<!-- auto&#45;&gt;audit_log -->
+<g id="edge32" class="edge">
+<title>auto-&gt;audit_log</title>
+<path fill="none" stroke="#2b2b2b" d="M163.02,-145.83C173.44,-136.88 186.31,-125.81 197.54,-116.16"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="199.07,-118.07 202.78,-111.65 195.87,-114.36 199.07,-118.07"/>
+</g>
+<!-- manual&#45;&gt;audit_log -->
+<g id="edge33" class="edge">
+<title>manual-&gt;audit_log</title>
+<path fill="none" stroke="#2b2b2b" d="M259.81,-143.28C254.03,-135.24 247.3,-125.87 241.25,-117.44"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="243.32,-116.11 237.24,-111.85 239.33,-118.97 243.32,-116.11"/>
+</g>
+<!-- end_node -->
+<g id="node25" class="node">
+<title>end_node</title>
+<ellipse fill="#e8e8e8" stroke="#2b2b2b" cx="224" cy="-20.7" rx="27" ry="20.7"/>
+<text xml:space="preserve" text-anchor="middle" x="224" y="-17.7" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#1a1a1a">End</text>
+</g>
+<!-- audit_log&#45;&gt;end_node -->
+<g id="edge34" class="edge">
+<title>audit_log-&gt;end_node</title>
+<path fill="none" stroke="#2b2b2b" d="M224,-74.18C224,-66.88 224,-58.18 224,-49.98"/>
+<polygon fill="#2b2b2b" stroke="#2b2b2b" points="226.45,-50.21 224,-43.21 221.55,-50.21 226.45,-50.21"/>
+</g>
+</g>
+</svg>

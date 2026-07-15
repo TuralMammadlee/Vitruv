@@ -157,14 +157,6 @@ public class DeletionConflict {
     }
 
     /**
-     * Returns {@code true} if this conflict is high-impact, defined as having
-     * more lost updates than the given threshold.
-     */
-    public boolean isHighImpact(int threshold) {
-        return getLostUpdateCount() >= threshold;
-    }
-
-    /**
      * Computes the {@link ConflictSeverity} of this conflict from
      * {@link #getWeightedImpact()} using the default {@link SeverityThresholds}.
      * Lost ORIGINAL edits contribute more to the score than lost CONSEQUENTIAL

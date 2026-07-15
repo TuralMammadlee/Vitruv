@@ -3,7 +3,9 @@ package tools.vitruv.framework.vsum.branch.data;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangeEntry;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Describes the result of an automatic update-conflict resolution pass.
@@ -45,28 +47,45 @@ public final class AutoResolutionOutcome {
 
     private final List<ResolvedConflict> autoResolved;
     private final List<UpdateConflict> unresolved;
+    private final Map<UpdateConflict, ResolutionProposal> advisoryProposals;
 
     private AutoResolutionOutcome(List<ResolvedConflict> autoResolved,
-                                   List<UpdateConflict> unresolved) {
-        this.autoResolved = List.copyOf(autoResolved);
-        this.unresolved   = List.copyOf(unresolved);
+                                   List<UpdateConflict> unresolved,
+                                   Map<UpdateConflict, ResolutionProposal> advisoryProposals) {
+        this.autoResolved      = List.copyOf(autoResolved);
+        this.unresolved        = List.copyOf(unresolved);
+        this.advisoryProposals = Map.copyOf(advisoryProposals);
     }
 
     /**
-     * Creates an outcome with the given auto-resolved and unresolved lists.
+     * Creates an outcome with the given auto-resolved and unresolved lists and
+     * no advisory proposals.
      */
     public static AutoResolutionOutcome of(List<ResolvedConflict> autoResolved,
                                             List<UpdateConflict> unresolved) {
+        return of(autoResolved, unresolved, Map.of());
+    }
+
+    /**
+     * Creates an outcome that also carries advisory proposals: advisor
+     * suggestions for unresolved conflicts that were <em>not</em> applied
+     * automatically (confidence below the threshold, or the reviewer deferred),
+     * so the interactive tier can still show them to the human.
+     */
+    public static AutoResolutionOutcome of(List<ResolvedConflict> autoResolved,
+                                            List<UpdateConflict> unresolved,
+                                            Map<UpdateConflict, ResolutionProposal> advisoryProposals) {
         return new AutoResolutionOutcome(
-                Objects.requireNonNull(autoResolved, "autoResolved must not be null"),
-                Objects.requireNonNull(unresolved,   "unresolved must not be null"));
+                Objects.requireNonNull(autoResolved,      "autoResolved must not be null"),
+                Objects.requireNonNull(unresolved,        "unresolved must not be null"),
+                Objects.requireNonNull(advisoryProposals, "advisoryProposals must not be null"));
     }
 
     /**
      * Convenience factory for when there were no conflicts at all.
      */
     public static AutoResolutionOutcome empty() {
-        return new AutoResolutionOutcome(List.of(), List.of());
+        return new AutoResolutionOutcome(List.of(), List.of(), Map.of());
     }
 
     /** Conflicts that were resolved automatically — no UI was needed. */
@@ -74,6 +93,15 @@ public final class AutoResolutionOutcome {
 
     /** Conflicts that could not be resolved automatically and require UI. */
     public List<UpdateConflict> getUnresolved() { return unresolved; }
+
+    /**
+     * Returns the advisor's below-threshold (advisory) proposal for the given
+     * unresolved conflict, if one exists. Interactive strategies display it as
+     * a hint; it carries no authority.
+     */
+    public Optional<ResolutionProposal> getAdvisoryProposal(UpdateConflict conflict) {
+        return Optional.ofNullable(advisoryProposals.get(conflict));
+    }
 
     /** Returns {@code true} when every conflict was handled automatically. */
     public boolean isFullyResolved() { return unresolved.isEmpty(); }

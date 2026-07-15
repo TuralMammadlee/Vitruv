@@ -2,14 +2,12 @@ package tools.vitruv.framework.vsum.branch.handler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
-import tools.vitruv.change.atomic.EChange;
 import tools.vitruv.change.atomic.uuid.UuidResolver;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangeBuffer;
 import tools.vitruv.framework.vsum.branch.storage.SemanticChangelogManager;
@@ -32,7 +30,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * <p>When a developer commits directly from their IDE or Git CLI, the Git {@code post-commit}
  * hook writes a trigger file that {@link VsumPostCommitWatcher} detects and forwards here.
  *
- * <p><b>Changelog writing</b>: Both commit paths produce the same JSON/XMI semantic changelog:
+ * <p><b>Changelog writing</b>: Both commit paths write the annotated JSON/XMI semantic changelog
+ * (including per-change {@code ChangeOrigin} tags and {@code consequentialFootprints}), so
+ * downstream conflict resolution and the interleaving merge engine see identical fidelity
+ * regardless of how the commit was made:
  * <ul>
  *   <li><b>API path</b> ({@link tools.vitruv.framework.vsum.branch.CommitManager}): changelog is
  *       written synchronously at commit time, staged in the same commit.</li>
@@ -125,13 +126,19 @@ public class PostCommitHandler {
                 parentShas.add(parent.getName());
             }
 
-            Map<String, List<EChange<EObject>>> changesByResource = changeBuffer.drainChanges();
+            // Drain the annotated buffer so the per-change ChangeOrigin tag (and, in turn,
+            // consequentialFootprints) survives into the persisted changelog. This mirrors
+            // CommitManager's API-commit path so both commit paths produce changelogs with
+            // identical fidelity; the plain drainChanges()/write() pair silently discarded
+            // origin information and left consequentialFootprints null.
+            Map<String, List<SemanticChangeBuffer.AnnotatedEChange>> annotatedByResource =
+                    changeBuffer.drainAnnotatedChanges();
             Collection<Resource> activeResources = resourceSupplier.get();
 
-            List<Path> writtenFiles = changelogManager.write(
+            List<Path> writtenFiles = changelogManager.writeAnnotated(
                     commitSha, branch, author.getName(), authorDate,
                     revCommit.getFullMessage().trim(),
-                    parentShas, changesByResource, activeResources, uuidResolver);
+                    parentShas, annotatedByResource, activeResources, uuidResolver);
 
             for (Path file : writtenFiles) {
                 String relativePath = repositoryRoot.relativize(file).toString().replace('\\', '/');

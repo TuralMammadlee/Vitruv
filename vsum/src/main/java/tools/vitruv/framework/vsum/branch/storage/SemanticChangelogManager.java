@@ -13,6 +13,7 @@ import org.eclipse.emf.ecore.resource.Resource;
 import tools.vitruv.change.atomic.EChange;
 import tools.vitruv.change.atomic.uuid.UuidResolver;
 import tools.vitruv.change.changederivation.persistence.DeltaPersistence;
+import tools.vitruv.framework.vsum.branch.data.ConsequentialFootprint;
 import tools.vitruv.framework.vsum.branch.data.FileOperation;
 
 import java.io.IOException;
@@ -221,13 +222,52 @@ public class SemanticChangelogManager {
         checkNotNull(branch, "branch must not be null");
         checkNotNull(shortSha, "shortSha must not be null");
 
-        Path file = repositoryRoot.resolve(".vitruvius").resolve("changelogs").resolve(branch).resolve("json")
-                .resolve(shortSha + ".json");
+        Path file = jsonChangelogDir(branch).resolve(shortSha + ".json");
         if (!Files.exists(file)) {
             return null;
         }
         String json = Files.readString(file);
         return gson.fromJson(json, ChangelogDocument.class);
+    }
+
+    /**
+     * Reads every JSON changelog persisted for the given branch.
+     *
+     * <p>Used by consumers that need a branch's full recorded change history
+     * rather than one specific commit — e.g. the agentic advisor's
+     * element-history tool, which retrieves all past changes touching a
+     * conflicting element on its own. Files that cannot be parsed are skipped
+     * with a warning so one corrupt changelog never hides the rest.
+     *
+     * @param branch the branch whose changelogs to read.
+     * @return the parsed documents (unordered); empty when the branch has no
+     *         changelog directory.
+     * @throws IOException if the changelog directory exists but cannot be listed.
+     */
+    public List<ChangelogDocument> readAll(String branch) throws IOException {
+        checkNotNull(branch, "branch must not be null");
+        Path jsonDir = jsonChangelogDir(branch);
+        if (!Files.isDirectory(jsonDir)) {
+            return List.of();
+        }
+        List<ChangelogDocument> documents = new ArrayList<>();
+        try (var files = Files.list(jsonDir)) {
+            for (Path file : files.filter(f -> f.getFileName().toString().endsWith(".json")).toList()) {
+                try {
+                    ChangelogDocument document = gson.fromJson(Files.readString(file), ChangelogDocument.class);
+                    if (document != null) {
+                        documents.add(document);
+                    }
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("Skipping unreadable changelog {}: {}", file.getFileName(), e.getMessage());
+                }
+            }
+        }
+        return documents;
+    }
+
+    private Path jsonChangelogDir(String branch) {
+        return repositoryRoot.resolve(".vitruvius").resolve("changelogs").resolve(branch).resolve("json");
     }
 
     private ChangelogDocument buildDocument(String commitSha, String branch, String author, LocalDateTime authorDate,
@@ -272,6 +312,9 @@ public class SemanticChangelogManager {
             fileInfo.semanticChanges = entries;
             doc.fileChanges.add(fileInfo);
         }
+
+        // Not available in the plain (non-annotated) path — origins are unknown
+        doc.consequentialFootprints = null;
 
         // Summary
         doc.summary = new ChangelogDocument.Summary();
@@ -325,6 +368,27 @@ public class SemanticChangelogManager {
             fileInfo.semanticChanges = entries;
             doc.fileChanges.add(fileInfo);
         }
+
+        // Consequential footprints — the (uuid, eClass, feature) triples written by
+        // Reactions. De-duplicated via LinkedHashSet to maintain a stable order while
+        // discarding repeated pairs (e.g. when two Reactions write the same feature).
+        java.util.LinkedHashSet<ConsequentialFootprint> footprintSet = new java.util.LinkedHashSet<>();
+        for (List<SemanticChangeBuffer.AnnotatedEChange> changes : changesByResource.values()) {
+            for (SemanticChangeBuffer.AnnotatedEChange annotated : changes) {
+                if (annotated.getOrigin() == ChangeOrigin.CONSEQUENTIAL) {
+                    List<SemanticChangeEntry> entries = converter.convertAnnotated(List.of(annotated));
+                    if (!entries.isEmpty()) {
+                        SemanticChangeEntry e = entries.get(0);
+                        if (e.getElementUuid() != null && !e.getElementUuid().equals("unknown")
+                                && e.getFeature() != null) {
+                            footprintSet.add(new ConsequentialFootprint(
+                                    e.getElementUuid(), e.getEClass(), e.getFeature()));
+                        }
+                    }
+                }
+            }
+        }
+        doc.consequentialFootprints = new ArrayList<>(footprintSet);
 
         // Summary
         doc.summary = new ChangelogDocument.Summary();
@@ -406,10 +470,12 @@ public class SemanticChangelogManager {
     }
 
     private Gson buildGson() {
-        return new GsonBuilder().setPrettyPrinting().registerTypeAdapter(LocalDateTime.class,
-                (JsonSerializer<LocalDateTime>) (src, type, ctx) -> new JsonPrimitive(src.format(DATE_FORMATTER)))
-                .registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (json, type,
-                        ctx) -> LocalDateTime.parse(json.getAsString(), DATE_FORMATTER))
+        return new GsonBuilder().setPrettyPrinting()
+                .registerTypeAdapter(LocalDateTime.class,
+                        (JsonSerializer<LocalDateTime>) (src, type, ctx) -> new JsonPrimitive(src.format(DATE_FORMATTER)))
+                .registerTypeAdapter(LocalDateTime.class,
+                        (JsonDeserializer<LocalDateTime>) (json, type, ctx) ->
+                                LocalDateTime.parse(json.getAsString(), DATE_FORMATTER))
                 .registerTypeAdapter(ChangeOrigin.class,
                         (JsonSerializer<ChangeOrigin>) (src, type, ctx) -> new JsonPrimitive(src.name()))
                 .registerTypeAdapter(ChangeOrigin.class,
@@ -419,6 +485,17 @@ public class SemanticChangelogManager {
                             } catch (IllegalArgumentException e) {
                                 return ChangeOrigin.UNKNOWN;
                             }
+                        })
+                // ConsequentialFootprint is a Java record — Gson handles it as a POJO
+                // automatically; the explicit adapter makes de-serialisation robust against
+                // missing fields in older changelog files.
+                .registerTypeAdapter(ConsequentialFootprint.class,
+                        (JsonDeserializer<ConsequentialFootprint>) (json, type, ctx) -> {
+                            var obj = json.getAsJsonObject();
+                            String uuid = obj.has("elementUuid") ? obj.get("elementUuid").getAsString() : "unknown";
+                            String eClass = obj.has("eClass") ? obj.get("eClass").getAsString() : null;
+                            String feature = obj.has("feature") ? obj.get("feature").getAsString() : "unknown";
+                            return new ConsequentialFootprint(uuid, eClass, feature);
                         })
                 .create();
     }
@@ -432,6 +509,15 @@ public class SemanticChangelogManager {
         public String formatVersion;
         public CommitInfo commit;
         public List<FileChangeInfo> fileChanges;
+        /**
+         * Footprint of all element-feature pairs written by Reactions during this
+         * commit. Used by the dependency-graph construction in the semantic merge
+         * engine (paper section 4.8) to build inter-branch ordering edges without
+         * requiring live replay. Populated only when the changelog is written via
+         * {@link SemanticChangelogManager#writeAnnotated}; absent (null) in
+         * changelogs written by the plain {@link SemanticChangelogManager#write}.
+         */
+        public List<ConsequentialFootprint> consequentialFootprints;
         public Summary summary;
 
         public static class CommitInfo {

@@ -3,8 +3,12 @@ package tools.vitruv.framework.vsum.branch.storage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import tools.vitruv.framework.vsum.branch.ConflictResolutionAdvisor;
+import tools.vitruv.framework.vsum.branch.ConflictResolutionStrategy;
 import tools.vitruv.framework.vsum.branch.DomainValidator;
 import tools.vitruv.framework.vsum.branch.data.AutoResolutionOutcome;
+import tools.vitruv.framework.vsum.branch.data.ManualResolution;
+import tools.vitruv.framework.vsum.branch.data.ResolutionProposal;
 import tools.vitruv.framework.vsum.branch.data.UpdateConflict;
 
 import java.util.List;
@@ -244,6 +248,126 @@ class UpdateConflictResolverTest {
             assertFalse(validatorCalled[0], "domain validator must not be called for mixed-origin conflicts");
             // Tier 1 chose src (ORIGINAL)
             assertSame(src, outcome.getAutoResolved().get(0).chosenEntry());
+        }
+    }
+
+    // ── Tier 3: Learned advisor ───────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("Tier 3 — learned advisor")
+    class AdvisorTier {
+
+        private UpdateConflict ooConflict(String feature) {
+            SemanticChangeEntry src = entry("uuid-1", feature,
+                    SemanticChangeType.ATTRIBUTE_CHANGED, ChangeOrigin.ORIGINAL);
+            SemanticChangeEntry tgt = entry("uuid-1", feature,
+                    SemanticChangeType.ATTRIBUTE_CHANGED, ChangeOrigin.ORIGINAL);
+            return conflict(src, tgt);
+        }
+
+        @Test
+        @DisplayName("confident proposal is auto-applied")
+        void confidentProposalApplied() {
+            UpdateConflict c = ooConflict("name");
+            ConflictResolutionAdvisor advisor = conflict ->
+                    Optional.of(new ResolutionProposal(conflict.getTargetEntry(), 0.95, "ml says target", "test"));
+
+            AutoResolutionOutcome outcome =
+                    new UpdateConflictResolver(DomainValidator.NONE, advisor, 0.8).resolve(List.of(c));
+
+            assertEquals(1, outcome.getAutoResolved().size());
+            assertTrue(outcome.isFullyResolved());
+            assertSame(c.getTargetEntry(), outcome.getAutoResolved().get(0).chosenEntry());
+            assertTrue(outcome.getAutoResolved().get(0).reason().contains("advisor"));
+        }
+
+        @Test
+        @DisplayName("low-confidence proposal falls through to manual and is attached as an advisory hint")
+        void lowConfidenceProposalDeferred() {
+            UpdateConflict c = ooConflict("name");
+            ResolutionProposal proposal =
+                    new ResolutionProposal(c.getSourceEntry(), 0.55, "unsure", "test");
+            ConflictResolutionAdvisor advisor = conflict -> Optional.of(proposal);
+
+            AutoResolutionOutcome outcome =
+                    new UpdateConflictResolver(DomainValidator.NONE, advisor, 0.8).resolve(List.of(c));
+
+            assertTrue(outcome.getAutoResolved().isEmpty());
+            assertEquals(1, outcome.getUnresolved().size());
+            assertSame(proposal, outcome.getAdvisoryProposal(c).orElseThrow(),
+                    "below-threshold proposal must travel to the manual tier as a hint");
+        }
+
+        @Test
+        @DisplayName("confident proposal that the reviewer overrides keeps the other side")
+        void reviewerOverridesConfidentProposal() {
+            UpdateConflict c = ooConflict("name");
+            ConflictResolutionAdvisor advisor = conflict ->
+                    Optional.of(new ResolutionProposal(conflict.getSourceEntry(), 0.95, "ml says source", "test"));
+            // Reviewer overrides the proposal and keeps the target side instead.
+            ConflictResolutionStrategy reviewer = new ConflictResolutionStrategy() {
+                @Override
+                public ManualResolution resolve(UpdateConflict conflict) {
+                    return ManualResolution.deferred(conflict, "unused");
+                }
+                @Override
+                public ManualResolution reviewProposal(UpdateConflict conflict, ResolutionProposal proposal) {
+                    return ManualResolution.acceptTarget(conflict, "reviewer prefers target");
+                }
+            };
+
+            AutoResolutionOutcome outcome =
+                    new UpdateConflictResolver(DomainValidator.NONE, advisor, 0.8, reviewer).resolve(List.of(c));
+
+            assertEquals(1, outcome.getAutoResolved().size());
+            assertSame(c.getTargetEntry(), outcome.getAutoResolved().get(0).chosenEntry());
+            assertTrue(outcome.getAutoResolved().get(0).reason().contains("overrode"));
+        }
+
+        @Test
+        @DisplayName("confident proposal the reviewer defers routes to manual resolution")
+        void reviewerDefersConfidentProposal() {
+            UpdateConflict c = ooConflict("name");
+            ConflictResolutionAdvisor advisor = conflict ->
+                    Optional.of(new ResolutionProposal(conflict.getSourceEntry(), 0.95, "ml says source", "test"));
+            // A lambda reviewer would inherit the default reviewProposal (auto-confirm),
+            // so override it explicitly to defer.
+            ConflictResolutionStrategy deferringReviewer = new ConflictResolutionStrategy() {
+                @Override
+                public ManualResolution resolve(UpdateConflict conflict) {
+                    return ManualResolution.deferred(conflict, "unused");
+                }
+                @Override
+                public ManualResolution reviewProposal(UpdateConflict conflict, ResolutionProposal proposal) {
+                    return ManualResolution.deferred(conflict, "reviewer wants a human");
+                }
+            };
+
+            AutoResolutionOutcome outcome =
+                    new UpdateConflictResolver(DomainValidator.NONE, advisor, 0.8, deferringReviewer)
+                            .resolve(List.of(c));
+
+            assertTrue(outcome.getAutoResolved().isEmpty());
+            assertEquals(1, outcome.getUnresolved().size());
+            assertSame(c, outcome.getUnresolved().get(0));
+        }
+
+        @Test
+        @DisplayName("domain validator is consulted before the advisor")
+        void domainValidatorWinsOverAdvisor() {
+            UpdateConflict c = ooConflict("version");
+            DomainValidator validator = conflict -> Optional.of(conflict.getSourceEntry());
+            boolean[] advisorCalled = {false};
+            ConflictResolutionAdvisor advisor = conflict -> {
+                advisorCalled[0] = true;
+                return Optional.of(new ResolutionProposal(conflict.getTargetEntry(), 0.99, "x", "test"));
+            };
+
+            AutoResolutionOutcome outcome =
+                    new UpdateConflictResolver(validator, advisor, 0.8).resolve(List.of(c));
+
+            assertFalse(advisorCalled[0], "advisor must not be consulted when domain validator resolves");
+            assertSame(c.getSourceEntry(), outcome.getAutoResolved().get(0).chosenEntry());
         }
     }
 

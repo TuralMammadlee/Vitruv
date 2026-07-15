@@ -227,9 +227,12 @@ public class SemanticChangeEntry {
         }
     }
 
-    public ChangeOrigin getOrigin() {
-        return origin != null ? origin : ChangeOrigin.UNKNOWN;
-    }
+    public int getIndex() { return index; }
+    public SemanticChangeType getChangeType() { return changeType; }
+    public String getElementUuid() { return elementUuid; }
+    public String getEClass() { return eClass; }
+    public String getFeature() { return feature; }
+    public ChangeOrigin getOrigin() { return origin != null ? origin : ChangeOrigin.UNKNOWN; }
 
     @Override
     public boolean equals(Object o) {
