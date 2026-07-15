@@ -237,6 +237,37 @@ public class RoleManager {
     }
 
     /**
+     * Returns normalized user IDs assigned to the given role (case-insensitive).
+     */
+    public List<String> findUserIdsByRole(String roleName) {
+        if (roleName == null || roleName.isBlank()) {
+            return List.of();
+        }
+        String normalized = roleName.trim().toUpperCase();
+        return users.stream()
+                .filter(u -> normalized.equals(u.getRoleName()))
+                .map(UserProfile::getUserId)
+                .toList();
+    }
+
+    /**
+     * Returns fallback assignee IDs when blame/semantic owner detection finds no one.
+     *
+     * <p>Prefers {@code METHODOLOGIST} users; if none exist, returns the first admin.
+     */
+    public List<String> findFallbackOwnerIds() {
+        List<String> methodologists = findUserIdsByRole("METHODOLOGIST");
+        if (!methodologists.isEmpty()) {
+            return methodologists;
+        }
+        return users.stream()
+                .filter(UserProfile::isAdmin)
+                .map(UserProfile::getUserId)
+                .limit(1)
+                .toList();
+    }
+
+    /**
      * Finds a user profile by Git email (case-insensitive).
      */
     public Optional<UserProfile> findUser(String userId) {

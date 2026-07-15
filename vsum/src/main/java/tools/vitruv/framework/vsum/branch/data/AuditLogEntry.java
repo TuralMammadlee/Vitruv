@@ -172,6 +172,107 @@ public final class AuditLogEntry {
         return null;
     }
 
+    /**
+     * Creates an audit entry when an owner notification artifact is written
+     * during the clearance-denied escalation path.
+     */
+    public static AuditLogEntry forOwnerNotification(OwnerNotification notification,
+                                                     String sourceBranch, String targetBranch) {
+        Objects.requireNonNull(notification, "notification must not be null");
+        return new AuditLogEntry(
+                Instant.now().toString(),
+                "OWNER_NOTIFICATION",
+                notification.getDeletedElementUuid(),
+                "NOTIFIED: " + notification.getDetectedOwners(),
+                "Risk score " + notification.getRiskScore()
+                        + ", severity " + notification.getSeverity()
+                        + ", " + notification.getLostUpdateCount() + " lost update(s)",
+                null,
+                sourceBranch,
+                targetBranch,
+                null,   // owner-workflow entries carry no update signature/side
+                null);
+    }
+
+    /**
+     * Creates an audit entry when a conflict review artifact is written for
+     * the owner to inspect.
+     */
+    public static AuditLogEntry forOwnerReview(ConflictReview review,
+                                               String sourceBranch, String targetBranch) {
+        Objects.requireNonNull(review, "review must not be null");
+        return new AuditLogEntry(
+                Instant.now().toString(),
+                "OWNER_REVIEW",
+                review.getDeletedElementUuid(),
+                "REVIEW: severity " + review.getSeverityReport().getSeverity(),
+                review.getHistory().size() + " history entry/entries, "
+                        + review.getStatePreviews().size() + " preview(s), "
+                        + "ancestorRecoverable=" + review.isAncestorRecoverable(),
+                null,
+                sourceBranch,
+                targetBranch,
+                null,   // owner-workflow entries carry no update signature/side
+                null);
+    }
+
+    /**
+     * Creates an audit entry when an owner records an approve/deny decision.
+     */
+    public static AuditLogEntry forOwnerDecision(OwnerDecision decision) {
+        Objects.requireNonNull(decision, "decision must not be null");
+        return new AuditLogEntry(
+                decision.getTimestamp(),
+                "OWNER_DECISION",
+                decision.getElementUuid(),
+                decision.getDecision(),
+                "Owner " + decision.getOwnerId() + " " + decision.getDecision().toLowerCase()
+                        + " the conflict resolution",
+                decision.getRationale(),
+                decision.getSourceBranch(),
+                decision.getTargetBranch(),
+                null,   // owner-workflow entries carry no update signature/side
+                null);
+    }
+
+    /**
+     * Creates an audit entry when a conflict is re-routed to a senior role
+     * after owner deny or no response.
+     */
+    public static AuditLogEntry forOwnerEscalation(OwnerEscalation escalation) {
+        Objects.requireNonNull(escalation, "escalation must not be null");
+        return new AuditLogEntry(
+                escalation.getTimestamp(),
+                "OWNER_ESCALATION",
+                escalation.getElementUuid(),
+                escalation.getStatus(),
+                escalation.getReason() + " -> assignees " + escalation.getAssignees(),
+                null,
+                escalation.getSourceBranch(),
+                escalation.getTargetBranch(),
+                null,   // owner-workflow entries carry no update signature/side
+                null);
+    }
+
+    /**
+     * Creates an audit entry when a merge is blocked because no owner approved
+     * the escalated conflict (or the owner denied it).
+     */
+    public static AuditLogEntry forMergeBlocked(String elementUuid, String reason,
+                                                String sourceBranch, String targetBranch) {
+        return new AuditLogEntry(
+                Instant.now().toString(),
+                "MERGE_BLOCKED",
+                elementUuid,
+                "BLOCKED",
+                reason,
+                null,
+                sourceBranch,
+                targetBranch,
+                null,   // owner-workflow entries carry no update signature/side
+                null);
+    }
+
     public String getTimestamp()    { return timestamp; }
     public String getConflictType() { return conflictType; }
     public String getElementUuid()  { return elementUuid; }
