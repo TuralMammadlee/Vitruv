@@ -31,3 +31,5 @@ Thumbs.db
 .project
 .classpath
 .settings/
+
+echo "paper/" >> .gitignore

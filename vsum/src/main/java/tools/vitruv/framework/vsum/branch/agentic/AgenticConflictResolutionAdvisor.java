@@ -164,6 +164,8 @@ public final class AgenticConflictResolutionAdvisor implements ConflictResolutio
             if (calls.isEmpty()) {
                 if (!nudged) {
                     nudged = true;
+                    LOGGER.info("[iteration {}] model replied without calling a tool; nudging for a structured call",
+                            iteration);
                     messages.add(ChatMessage.user(
                             "You did not call a tool. Reply with ONLY a JSON tool call, one line, for example:\n"
                             + "{\"name\":\"submit_resolution\",\"arguments\":{\"choice\":\"source\","
@@ -182,15 +184,20 @@ public final class AgenticConflictResolutionAdvisor implements ConflictResolutio
             for (ToolCall call : calls) {
                 String toolName = call.name();
                 if (SUBMIT_TOOL.equals(toolName)) {
+                    LOGGER.info("[iteration {}] model calls {}({})", iteration, SUBMIT_TOOL, call.arguments());
                     step.addToolInvocation(SUBMIT_TOOL, call.arguments().toString(), "decision recorded");
                     return decide(conflict, call.arguments(), trace, startNanos);
                 }
                 AgentTool tool = toolsByName.get(toolName);
+                LOGGER.info("[iteration {}] model calls {}({})", iteration, toolName, call.arguments());
                 String result = (tool == null)
                         ? "error: unknown tool '" + toolName + "'"
                         : tool.execute(call.arguments(), conflict);
+                LOGGER.info("[iteration {}] {} -> {}", iteration, toolName, truncateForLog(result));
                 step.addToolInvocation(toolName, call.arguments().toString(), result);
-                messages.add(ChatMessage.tool(result));
+                // Pair the result to the call id for OpenAI-compatible backends;
+                // null for Ollama, where the field is simply omitted.
+                messages.add(ChatMessage.tool(result, call.id()));
             }
         }
 
@@ -281,6 +288,7 @@ public final class AgenticConflictResolutionAdvisor implements ConflictResolutio
         }
 
         double clamped = Math.max(0.0, Math.min(1.0, confidence));
+        LOGGER.info("Decision: keep '{}' (confidence={}) - {}", choice, clamped, rationale);
         ResolutionProposal proposal = new ResolutionProposal(
                 chosen, clamped, rationale + " [" + sourceId + "]", sourceId);
         return finish(trace, AgenticTrace.Outcome.RESOLVED, choice, clamped, rationale,
@@ -358,5 +366,14 @@ public final class AgenticConflictResolutionAdvisor implements ConflictResolutio
         return new ToolSpec(SUBMIT_TOOL,
                 "Commit to a final resolution decision for the current conflict. Call exactly once.",
                 schema);
+    }
+
+    /** Keeps a single tool result readable on one log line without truncating the full trace file. */
+    private static String truncateForLog(String result) {
+        if (result == null) {
+            return "";
+        }
+        String oneLine = result.replace('\n', ' ').replace('\r', ' ');
+        return oneLine.length() <= 300 ? oneLine : oneLine.substring(0, 300) + "...";
     }
 }

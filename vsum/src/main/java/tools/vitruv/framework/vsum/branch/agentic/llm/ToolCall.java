@@ -11,9 +11,19 @@ import com.google.gson.JsonObject;
  */
 public final class ToolCall {
 
+    private String id;
     private Function function;
 
     public Function getFunction() { return function; }
+
+    /**
+     * Provider-assigned call id. Present in OpenAI-compatible responses (used to
+     * pair the tool result back to this call); {@code null} for Ollama and for
+     * content-parsed calls.
+     */
+    public String id() {
+        return id;
+    }
 
     public String name() {
         return function == null ? null : function.name;
@@ -29,7 +39,13 @@ public final class ToolCall {
 
     /** Builds a tool call from a parsed name and arguments (content-based fallback). */
     public static ToolCall of(String name, JsonObject arguments) {
+        return of(null, name, arguments);
+    }
+
+    /** Builds a tool call with an explicit provider call id (OpenAI-compatible parsing). */
+    public static ToolCall of(String id, String name, JsonObject arguments) {
         ToolCall call = new ToolCall();
+        call.id = id;
         call.function = new Function();
         call.function.name = name;
         call.function.arguments = arguments == null ? new JsonObject() : arguments;

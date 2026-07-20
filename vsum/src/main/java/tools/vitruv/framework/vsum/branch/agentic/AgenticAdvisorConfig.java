@@ -24,8 +24,15 @@ public class AgenticAdvisorConfig {
 
     private static final String CONFIG_FILE = "agentic-advisor.json";
 
+    /** Backend that speaks Ollama's native {@code /api/chat} protocol (local Ollama). */
+    public static final String PROVIDER_OLLAMA = "ollama";
+    /** Backend that speaks the OpenAI chat-completions protocol (e.g. self-hosted Open WebUI). */
+    public static final String PROVIDER_OPENAI = "openai";
+
+    private static final String DEFAULT_PROVIDER = PROVIDER_OLLAMA;
     private static final String DEFAULT_ENDPOINT = "http://localhost:11434";
     private static final String DEFAULT_MODEL = "qwen2.5-coder:14b";
+    private static final String DEFAULT_API_KEY_ENV = "VITRUV_LLM_API_KEY";
     private static final int DEFAULT_REQUEST_TIMEOUT_SECONDS = 60;
     private static final int DEFAULT_MAX_ITERATIONS = 6;
     private static final int DEFAULT_DEADLINE_SECONDS = 120;
@@ -34,11 +41,32 @@ public class AgenticAdvisorConfig {
     /** Master switch. When {@code false} the advisor always returns "no opinion". */
     private boolean enabled = true;
 
-    /** Base URL of the local Ollama server (no trailing slash). */
+    /**
+     * Which backend protocol to use: {@link #PROVIDER_OLLAMA} (default, local
+     * Ollama) or {@link #PROVIDER_OPENAI} (an OpenAI-compatible server such as a
+     * self-hosted Open WebUI). This lets a team point the whole advisor at a
+     * shared hosted model without any code change.
+     */
+    private String provider = DEFAULT_PROVIDER;
+
+    /**
+     * Base URL of the backend (no trailing slash). For {@link #PROVIDER_OLLAMA}
+     * this is the Ollama server (e.g. {@code http://localhost:11434}); for
+     * {@link #PROVIDER_OPENAI} it is the OpenAI-compatible base (e.g.
+     * {@code https://open-webui.example.edu/api}).
+     */
     private String endpoint = DEFAULT_ENDPOINT;
 
-    /** Ollama model tag, e.g. {@code qwen2.5-coder:14b} or {@code qwen2.5-coder:7b}. */
+    /** Model identifier: an Ollama tag, or the model name as exposed by the hosted server. */
     private String model = DEFAULT_MODEL;
+
+    /**
+     * Name of the environment variable that holds the API key for
+     * {@link #PROVIDER_OPENAI}. The key <em>value</em> is deliberately never
+     * stored here, so this config file can be committed and shared: each user
+     * exports their own key under this variable. Unused for {@link #PROVIDER_OLLAMA}.
+     */
+    private String apiKeyEnv = DEFAULT_API_KEY_ENV;
 
     /** Per-request HTTP timeout in seconds. */
     private int requestTimeoutSeconds = DEFAULT_REQUEST_TIMEOUT_SECONDS;
@@ -97,11 +125,22 @@ public class AgenticAdvisorConfig {
     }
 
     private void validate() {
+        if (provider == null || provider.isBlank()) {
+            throw new IllegalArgumentException("provider must not be blank");
+        }
+        String normalizedProvider = provider.trim().toLowerCase();
+        if (!PROVIDER_OLLAMA.equals(normalizedProvider) && !PROVIDER_OPENAI.equals(normalizedProvider)) {
+            throw new IllegalArgumentException(
+                    "provider must be '" + PROVIDER_OLLAMA + "' or '" + PROVIDER_OPENAI + "' but was: " + provider);
+        }
         if (endpoint == null || endpoint.isBlank()) {
             throw new IllegalArgumentException("endpoint must not be blank");
         }
         if (model == null || model.isBlank()) {
             throw new IllegalArgumentException("model must not be blank");
+        }
+        if (PROVIDER_OPENAI.equals(normalizedProvider) && (apiKeyEnv == null || apiKeyEnv.isBlank())) {
+            throw new IllegalArgumentException("apiKeyEnv must not be blank when provider is '" + PROVIDER_OPENAI + "'");
         }
         if (requestTimeoutSeconds <= 0) {
             throw new IllegalArgumentException("requestTimeoutSeconds must be > 0");
@@ -118,16 +157,28 @@ public class AgenticAdvisorConfig {
     }
 
     public boolean isEnabled() { return enabled; }
+
+    /** Returns the backend provider, normalized to lower case ({@code ollama} / {@code openai}). */
+    public String getProvider() { return provider == null ? DEFAULT_PROVIDER : provider.trim().toLowerCase(); }
+
+    /** True when the configured provider is the OpenAI-compatible backend. */
+    public boolean isOpenAiProvider() { return PROVIDER_OPENAI.equals(getProvider()); }
+
     public String getEndpoint() { return endpoint; }
     public String getModel() { return model; }
+
+    /** Name of the environment variable holding the API key (never the key itself). */
+    public String getApiKeyEnv() { return apiKeyEnv; }
     public int getRequestTimeoutSeconds() { return requestTimeoutSeconds; }
     public int getMaxIterations() { return maxIterations; }
     public int getDeadlineSeconds() { return deadlineSeconds; }
     public double getTemperature() { return temperature; }
 
     public AgenticAdvisorConfig setEnabled(boolean enabled) { this.enabled = enabled; return this; }
+    public AgenticAdvisorConfig setProvider(String provider) { this.provider = provider; return this; }
     public AgenticAdvisorConfig setEndpoint(String endpoint) { this.endpoint = endpoint; return this; }
     public AgenticAdvisorConfig setModel(String model) { this.model = model; return this; }
+    public AgenticAdvisorConfig setApiKeyEnv(String apiKeyEnv) { this.apiKeyEnv = apiKeyEnv; return this; }
 
     public AgenticAdvisorConfig setRequestTimeoutSeconds(int seconds) {
         this.requestTimeoutSeconds = seconds;
@@ -151,9 +202,12 @@ public class AgenticAdvisorConfig {
 
     @Override
     public String toString() {
+        // Note: no secret is present to leak — only the env-var *name* is stored.
         return "AgenticAdvisorConfig{enabled=" + enabled
+                + ", provider='" + provider + '\''
                 + ", endpoint='" + endpoint + '\''
                 + ", model='" + model + '\''
+                + ", apiKeyEnv='" + apiKeyEnv + '\''
                 + ", requestTimeoutSeconds=" + requestTimeoutSeconds
                 + ", maxIterations=" + maxIterations
                 + ", deadlineSeconds=" + deadlineSeconds

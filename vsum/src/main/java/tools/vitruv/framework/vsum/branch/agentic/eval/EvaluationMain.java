@@ -2,10 +2,11 @@ package tools.vitruv.framework.vsum.branch.agentic.eval;
 
 import tools.vitruv.framework.vsum.branch.ConflictResolutionAdvisor;
 import tools.vitruv.framework.vsum.branch.agentic.AgenticAdvisorConfig;
+import tools.vitruv.framework.vsum.branch.agentic.AgenticAdvisorFactory;
 import tools.vitruv.framework.vsum.branch.agentic.AgenticConflictResolutionAdvisor;
 import tools.vitruv.framework.vsum.branch.agentic.AgenticTraceSink;
 import tools.vitruv.framework.vsum.branch.agentic.FileAgenticTraceSink;
-import tools.vitruv.framework.vsum.branch.agentic.llm.OllamaClient;
+import tools.vitruv.framework.vsum.branch.agentic.llm.LlmChatModel;
 import tools.vitruv.framework.vsum.branch.agentic.tools.AgentTool;
 import tools.vitruv.framework.vsum.branch.agentic.tools.AuditHistoryTool;
 import tools.vitruv.framework.vsum.branch.agentic.tools.ConflictContextTool;
@@ -18,10 +19,10 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Command-line entry point that scores the statistical baseline and (when a
- * local Ollama backend is reachable) the agentic advisor over the built-in
- * {@link ScenarioLibrary}, prints a summary, and writes per-advisor JSON and CSV
- * reports.
+ * Command-line entry point that scores the statistical baseline and (when the
+ * configured backend — local Ollama or an OpenAI-compatible hosted server — is
+ * reachable) the agentic advisor over the built-in {@link ScenarioLibrary},
+ * prints a summary, and writes per-advisor JSON and CSV reports.
  *
  * <p>Usage: {@code java ... EvaluationMain [outputDir [configDir]]}
  * <ul>
@@ -63,16 +64,25 @@ public final class EvaluationMain {
         System.out.println(baselineReport.summaryLine());
         write(outputDir, "audit-history", baselineReport);
 
-        // Agentic advisor: only if the local model is reachable.
-        OllamaClient client = new OllamaClient(config);
+        // Agentic advisor: only if the configured backend is reachable. The
+        // backend (Ollama vs. an OpenAI-compatible hosted server) is chosen from
+        // config.getProvider(), exactly as AgenticAdvisorProvider chooses it for a
+        // real merge, so this harness exercises the same wiring a live run would use.
+        LlmChatModel client = AgenticAdvisorFactory.createModel(config);
         if (!client.isAvailable()) {
-            System.out.println("Ollama not reachable at " + config.getEndpoint()
-                    + "; skipping agentic evaluation.");
-            System.out.println("-> Make sure 'ollama serve' is running and '"
-                    + config.getModel() + "' is pulled.");
+            System.out.println("Backend '" + config.getProvider() + "' not reachable at "
+                    + config.getEndpoint() + "; skipping agentic evaluation.");
+            if (config.isOpenAiProvider()) {
+                System.out.println("-> Check that " + config.getApiKeyEnv()
+                        + " is exported with a valid API key and the endpoint is correct.");
+            } else {
+                System.out.println("-> Make sure 'ollama serve' is running and '"
+                        + config.getModel() + "' is pulled.");
+            }
             return;
         }
-        System.out.println("Ollama is up, model=" + config.getModel() + ". Running agentic eval...");
+        System.out.println("Backend '" + config.getProvider() + "' is up, model="
+                + config.getModel() + ". Running agentic eval...");
 
         // The evaluation scenarios are self-contained (no persisted changelogs on
         // disk), so only the two changelog-independent tools are exercised here;

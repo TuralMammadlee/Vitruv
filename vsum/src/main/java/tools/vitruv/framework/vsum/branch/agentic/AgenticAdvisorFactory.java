@@ -6,6 +6,7 @@ import tools.vitruv.framework.vsum.branch.ConflictResolutionAdvisor;
 import tools.vitruv.framework.vsum.branch.MergeManager;
 import tools.vitruv.framework.vsum.branch.agentic.llm.LlmChatModel;
 import tools.vitruv.framework.vsum.branch.agentic.llm.OllamaClient;
+import tools.vitruv.framework.vsum.branch.agentic.llm.OpenAiCompatibleClient;
 import tools.vitruv.framework.vsum.branch.agentic.tools.AgentTool;
 import tools.vitruv.framework.vsum.branch.agentic.tools.AuditHistoryTool;
 import tools.vitruv.framework.vsum.branch.agentic.tools.ConflictContextTool;
@@ -80,8 +81,35 @@ public final class AgenticAdvisorFactory {
     public static ConflictResolutionAdvisor build(Path repoRoot, AgenticAdvisorConfig config) {
         Objects.requireNonNull(repoRoot, "repoRoot must not be null");
         Objects.requireNonNull(config, "config must not be null");
-        return build(repoRoot, new PersistedResolutionHistory(repoRoot), new OllamaClient(config),
+        return build(repoRoot, new PersistedResolutionHistory(repoRoot), createModel(config),
                 config, new FileAgenticTraceSink(repoRoot), null);
+    }
+
+    /**
+     * Selects the chat backend from the configured provider. For
+     * {@link AgenticAdvisorConfig#PROVIDER_OPENAI} the API key is read from the
+     * environment variable named by {@link AgenticAdvisorConfig#getApiKeyEnv()} —
+     * the key value is never taken from the config file, so the config can be
+     * shared/committed while each user supplies their own key. A missing key does
+     * not fail construction: the client simply reports itself unavailable and the
+     * advisor gives no opinion.
+     */
+    public static LlmChatModel createModel(AgenticAdvisorConfig config) {
+        Objects.requireNonNull(config, "config must not be null");
+        if (config.isOpenAiProvider()) {
+            String envVar = config.getApiKeyEnv();
+            String apiKey = System.getenv(envVar);
+            if (apiKey == null || apiKey.isBlank()) {
+                LOGGER.warn("Provider '{}' selected but environment variable {} is not set; "
+                                + "the agentic advisor will stay silent until it is exported with a valid key.",
+                        AgenticAdvisorConfig.PROVIDER_OPENAI, envVar);
+            } else {
+                LOGGER.info("Using OpenAI-compatible backend at {} (model '{}'), key from ${}",
+                        config.getEndpoint(), config.getModel(), envVar);
+            }
+            return new OpenAiCompatibleClient(config, apiKey);
+        }
+        return new OllamaClient(config);
     }
 
     /**
@@ -100,7 +128,7 @@ public final class AgenticAdvisorFactory {
         Objects.requireNonNull(history, "history must not be null");
 
         AgenticAdvisorConfig config = loadConfig(repoRoot);
-        return build(repoRoot, history, new OllamaClient(config), config,
+        return build(repoRoot, history, createModel(config), config,
                 new FileAgenticTraceSink(repoRoot), null);
     }
 
